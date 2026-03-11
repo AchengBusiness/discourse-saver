@@ -123,7 +123,24 @@
     eventListenerAdded = true;
 
     document.addEventListener('click', (e) => {
-      const target = e.target.closest('button, a');
+      // V3.5.8: 扩大匹配范围，包括 span、div 等元素
+      // LinuxDo 的按钮可能是各种元素类型
+      let target = e.target.closest('button, a, span[title], div[title]');
+
+      // 如果没找到，尝试从点击元素向上查找带 title 的元素
+      if (!target) {
+        target = e.target.closest('[title*="链接"], [title*="复制"], [title*="copy"], [title*="share"]');
+      }
+
+      // 还没找到，检查点击元素本身或其父元素
+      if (!target && e.target.closest('.topic-post')) {
+        // 可能点击的是 SVG 图标，向上查找按钮容器
+        const postControls = e.target.closest('.post-controls, .actions');
+        if (postControls) {
+          target = e.target.closest('[class*="share"], [class*="link"]') ||
+                   e.target.parentElement?.closest('[title]');
+        }
+      }
 
       // V3.5.3.1: 检查是否有bypass标记（用于触发原生复制链接）
       if (target?.hasAttribute('data-linuxdo-obsidian-bypass')) {
@@ -132,6 +149,18 @@
       }
 
       const linkResult = isLinkButton(target);
+
+      // 调试日志
+      if (e.target.closest('.topic-post')) {
+        console.log('[LinuxDo→Obsidian] 点击检测:', {
+          clickedElement: e.target.tagName,
+          clickedClass: e.target.className,
+          foundTarget: target?.tagName,
+          targetTitle: target?.title,
+          targetClass: target?.className,
+          isLink: linkResult.isLink
+        });
+      }
 
       if (target && linkResult.isLink) {
         e.preventDefault();
