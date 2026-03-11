@@ -50,7 +50,7 @@
 
   // 判断是否为帖子/评论区域的链接按钮，返回 { isLink: boolean, postNumber: string|null }
   // V3.5.7: 改为检测链接按钮（原书签按钮）
-  // V3.5.8: 修复误触发问题 - 只检测 data-value="share" 的按钮
+  // V3.5.8: 修复误触发问题 - 必须在帖子容器内 + 链接按钮特征
   function isLinkButton(element) {
     if (!element) return { isLink: false, postNumber: null };
 
@@ -59,18 +59,34 @@
       return { isLink: false, postNumber: null };
     }
 
-    // V3.5.8: 最严格的检测 - 只检测 Discourse 的 share 按钮
-    // Discourse 的分享按钮特征：data-value="share"
-    const dataValue = element.getAttribute('data-value') || '';
-
-    // 只有 data-value="share" 的按钮才会被拦截
-    if (dataValue !== 'share') {
+    // 核心检测：必须在帖子容器内（主帖或评论）
+    const postContainer = element.closest('.topic-post, article[data-post-id]');
+    if (!postContainer) {
       return { isLink: false, postNumber: null };
     }
 
-    // 必须在帖子容器内
-    const postContainer = element.closest('.topic-post, article[data-post-id]');
-    if (!postContainer) {
+    // 检查元素特征是否像链接/分享按钮
+    const text = element.textContent || '';
+    const className = element.className || '';
+    const dataValue = element.getAttribute('data-value') || '';
+    const title = element.title || '';
+    const ariaLabel = element.getAttribute('aria-label') || '';
+
+    // 链接按钮的特征
+    const isLinkLike = dataValue === 'share' ||
+           dataValue === 'link' ||
+           className.includes('share') ||
+           text.trim() === '链接' ||
+           text.trim() === 'Link' ||
+           text.trim() === 'Share' ||
+           title.includes('链接') ||
+           title.toLowerCase().includes('share') ||
+           title.toLowerCase().includes('link to this') ||
+           ariaLabel.includes('链接') ||
+           ariaLabel.toLowerCase().includes('share');
+
+    // 如果不像链接按钮，返回 false
+    if (!isLinkLike) {
       return { isLink: false, postNumber: null };
     }
 
