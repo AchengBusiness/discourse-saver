@@ -19,11 +19,24 @@
 
 ### 已测试站点（V3.6.0）
 
+#### 中文 Discourse 论坛
+
 | 站点 | URL | Discourse 版本 | 测试状态 |
 |-----|-----|---------------|---------|
 | **LinuxDo** | linux.do | 2026.3.0-latest | ✅ 完全兼容 |
-| **Discourse Meta** | meta.discourse.org | 2026.3.0-latest | ✅ 完全兼容 |
 | **Emacs China** | emacs-china.org | 3.5.0.beta8-dev | ✅ 完全兼容 |
+| **Julia 中文社区** | discourse.juliacn.com | 3.2.0.beta5-dev | ✅ 完全兼容 |
+| **openSUSE 中文论坛** | forum.suse.org.cn | 3.4.7 | ✅ 完全兼容 |
+| **飞致云社区** | bbs.fit2cloud.com | 3.1.0.beta4 | ✅ 完全兼容 |
+
+> 飞致云社区包含 1Panel、JumpServer、MeterSphere 等开源项目讨论区
+
+#### 国际 Discourse 论坛
+
+| 站点 | URL | Discourse 版本 | 测试状态 |
+|-----|-----|---------------|---------|
+| **Discourse Meta** | meta.discourse.org | 2026.3.0-latest | ✅ 完全兼容 |
+| **Cloudflare Community** | community.cloudflare.com | 2026.3.0-latest | ✅ 完全兼容 |
 
 ### 应支持站点（未测试）
 
@@ -36,16 +49,18 @@
 | **Brave Community** | community.brave.com | 浏览器社区 |
 | **Envato Forums** | forums.envato.com | 商业论坛 |
 | **Hugo Discourse** | discourse.gohugo.io | 技术社区 |
-| **Atom Discuss** | discuss.atom.io | 技术社区 |
 | **OpenAI Community** | community.openai.com | AI社区 |
 
 ### 非 Discourse 站点（不支持）
 
-| 站点 | URL | 实际框架 |
-|-----|-----|---------|
-| **Ruby China** | ruby-china.org | Homeland（非Discourse） |
+| 站点 | URL | 实际框架 | 说明 |
+|-----|-----|---------|------|
+| **Ruby China** | ruby-china.org | Homeland | 外观类似但框架不同 |
+| **V2EX** | v2ex.com | 自研 | 非 Discourse |
+| **NodeSeek** | nodeseek.com | 自研 | 非 Discourse |
+| **LearnKu** | learnku.com | 自研 | 非 Discourse |
 
-> **注意**：Ruby China 虽然外观类似，但使用的是 Homeland 框架，不是 Discourse，因此不支持。
+> **注意**：以上站点虽然是技术社区，但使用的不是 Discourse 框架，因此不支持。
 
 ### 自定义站点
 
