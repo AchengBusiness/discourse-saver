@@ -670,7 +670,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 注入 turndown 库
         await chrome.scripting.executeScript({
           target: { tabId },
-          files: ['turndown.min.js']
+          files: ['lib/turndown.min.js']
         });
         console.log('[Discourse Saver] turndown.min.js 注入成功');
 
