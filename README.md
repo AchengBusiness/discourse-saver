@@ -1,10 +1,10 @@
-# Discourse Saver V4.0.2
+# Discourse Saver V4.0.4
 
 **中文 | [English](README_EN.md)**
 
 通用 Discourse 论坛内容保存工具 - 一键保存任意 Discourse 论坛（如 LinuxDo、Discourse Meta、Rust Users 等数百个站点）的帖子和评论到 Obsidian、飞书多维表格或 Notion。
 
-> **V4.0.2 修复**：修复帖子内容换行丢失问题 + 改进 Notion 格式渲染
+> **V4.0.4 新增**：增强视频平台支持 - 新增优酷、抖音、TikTok、X/Twitter、Facebook、腾讯视频、西瓜视频
 
 ## 浏览器支持
 
@@ -496,6 +496,26 @@
 ---
 
 ## 更新日志
+
+### v4.0.4 (2026-03-13)
+
+- **新增**：增强视频平台支持
+  - 新增 iframe 嵌入：优酷、TikTok、腾讯视频、西瓜视频、Facebook
+  - 新增链接格式：抖音、X/Twitter（不支持 iframe）
+  - 创建通用视频解析函数 `parseVideoUrl()` 和 `generateVideoEmbed()`
+- **优化**：视频缩略图检测增强
+  - 新增各平台 CDN 域名检测（ykimg、douyinpic、tiktokcdn、twimg、fbcdn 等）
+  - 新增各平台 class 检测（youku-thumbnail、douyin-thumbnail 等）
+- **修复**：视频 onebox 直接转 iframe，非视频 onebox 显示预览卡片
+- **修复**：Bilibili onebox 缩略图丢失问题
+
+### v4.0.3 (2026-03-12)
+
+- **新增**：在线视频链接自动转 iframe 嵌入（YouTube、Bilibili、Vimeo）
+- **新增**：onebox 链接预览优化，显示标题、描述、缩略图
+- **新增**：Notion 视频嵌入支持（YouTube、Bilibili、Vimeo 转 video block）
+- **新增**：Notion 链接预览支持（bookmark block）
+- **优化**：iframe 响应式尺寸（width:100%; aspect-ratio:16/9）
 
 ### v4.0.2 (2026-03-12)
 
