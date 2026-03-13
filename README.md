@@ -1,6 +1,8 @@
 # Discourse Saver V4.0.2
 
-一键保存 **任意 Discourse 论坛**（包括 LinuxDo）帖子+评论到 **Obsidian**、**飞书多维表格** 或 **Notion**。
+**中文 | [English](README_EN.md)**
+
+通用 Discourse 论坛内容保存工具 - 一键保存任意 Discourse 论坛（如 LinuxDo、Discourse Meta、Rust Users 等数百个站点）的帖子和评论到 Obsidian、飞书多维表格或 Notion。
 
 > **V4.0.2 修复**：修复帖子内容换行丢失问题 + 改进 Notion 格式渲染
 

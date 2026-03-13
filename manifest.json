@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Discourse Saver",
   "version": "4.0.2",
-  "description": "一键保存Discourse论坛帖子+评论到Obsidian、飞书多维表格或Notion（支持LinuxDo及所有Discourse论坛）",
+  "description": "通用Discourse论坛内容保存工具 - 支持全球数百个Discourse站点（LinuxDo、Rust Users、Docker等），一键保存到Obsidian/飞书/Notion",
   "permissions": [
     "storage",
     "activeTab",
