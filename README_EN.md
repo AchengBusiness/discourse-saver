@@ -114,7 +114,7 @@ For privately deployed or undetected Discourse sites, you can manually add them 
    - **Opera**: Visit `opera://extensions/`
 3. Enable "Developer mode" in the top right corner
 4. Click "Load unpacked"
-5. Select plugin folder `linuxdo-to-obsidian`
+5. Select plugin folder `discourse-saver`
 
 > **Tip**: All Chromium-based browsers (Chrome, Edge, Brave, Opera, etc.) support this extension
 
@@ -565,7 +565,7 @@ This extension uses **Manifest V3** standard, fully compatible with all Chromium
 
 ### File Structure
 
-Plugin directory linuxdo-to-obsidian contains the following files:
+Plugin directory discourse-saver contains the following files:
 
 **Root Directory Files:**
 - manifest.json - Plugin configuration (Manifest V3)

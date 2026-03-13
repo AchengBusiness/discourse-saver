@@ -1,4 +1,4 @@
-# LinuxDo to Obsidian - Edge 浏览器安装指南
+# Discourse Saver - Edge 浏览器安装指南
 
 ## 快速安装
 
@@ -16,10 +16,10 @@
 
 4. **加载扩展**
    - 点击「加载解压缩的扩展」按钮
-   - 选择插件文件夹 `linuxdo-to-obsidian`
+   - 选择插件文件夹 `discourse-saver`
 
 5. **验证安装**
-   - 在扩展列表中看到「LinuxDo to Obsidian」
+   - 在扩展列表中看到「Discourse Saver」
    - 状态显示为「已启用」
 
 ### 方法二：从 Chrome Web Store 安装（如果插件已上架）
@@ -48,7 +48,7 @@
 为了方便使用，建议固定扩展图标：
 
 1. 点击地址栏右侧的「扩展」图标（拼图形状）
-2. 找到「LinuxDo to Obsidian」
+2. 找到「Discourse Saver」
 3. 点击旁边的「固定」图标（图钉形状）
 
 ## 配置选项
@@ -92,7 +92,7 @@
 
 ## 技术支持
 
-- GitHub Issues: https://github.com/AchengBusiness/linuxdo-to-obsidian/issues
+- GitHub Issues: https://github.com/AchengBusiness/discourse-saver/issues
 - 文档问题或建议：欢迎提交 PR
 
 ## 版本要求

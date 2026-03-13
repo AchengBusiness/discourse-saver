@@ -114,7 +114,7 @@
    - **Opera**：访问 `opera://extensions/`
 3. 开启右上角的「开发者模式」
 4. 点击「加载已解压的扩展程序」
-5. 选择插件文件夹 `linuxdo-to-obsidian`
+5. 选择插件文件夹 `discourse-saver`
 
 > **提示**：所有基于 Chromium 的浏览器（Chrome、Edge、Brave、Opera等）都支持本扩展
 
@@ -646,7 +646,7 @@
 
 ### 文件结构
 
-插件目录 linuxdo-to-obsidian 包含以下文件：
+插件目录 discourse-saver 包含以下文件：
 
 **根目录文件：**
 - manifest.json - 插件配置（Manifest V3）

@@ -309,5 +309,5 @@
 
 ## 联系方式
 
-- GitHub: https://github.com/AchengBusiness/linuxdo-to-obsidian
-- Issues: https://github.com/AchengBusiness/linuxdo-to-obsidian/issues
+- GitHub: https://github.com/AchengBusiness/discourse-saver
+- Issues: https://github.com/AchengBusiness/discourse-saver/issues
