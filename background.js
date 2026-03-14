@@ -1,4 +1,4 @@
-// Discourse Saver - Background Script V4.2.2
+// Discourse Saver - Background Script V4.2.3
 // 处理飞书/Notion API请求（解决CORS问题）+ 动态脚本注入
 // V3.5: 支持上传MD文件作为附件
 // V3.5.2: 支持飞书国内版和Lark国际版
@@ -1058,6 +1058,95 @@ async function updateNotionPage(token, pageId, pageData) {
   return result;
 }
 
+// V4.2.3: 解析 Markdown 格式为 Notion rich_text 格式
+// 支持链接 [text](url)、加粗 **text**、斜体 *text*、行内代码 `code`
+function parseMarkdownToRichText(text) {
+  const richTextArray = [];
+
+  // 综合正则：匹配链接、加粗、斜体、行内代码
+  // 顺序很重要：先匹配链接，再匹配加粗（**），再匹配斜体（*），最后匹配代码
+  const combinedRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)|\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = combinedRegex.exec(text)) !== null) {
+    // 添加匹配前的普通文本
+    if (match.index > lastIndex) {
+      const plainText = text.substring(lastIndex, match.index);
+      if (plainText) {
+        richTextArray.push({
+          type: 'text',
+          text: { content: plainText.substring(0, 2000) }
+        });
+      }
+    }
+
+    if (match[1] !== undefined && match[2] !== undefined) {
+      // 链接: [text](url)
+      richTextArray.push({
+        type: 'text',
+        text: {
+          content: match[1].substring(0, 2000),
+          link: { url: match[2] }
+        },
+        annotations: {
+          color: 'blue'  // 链接显示为蓝色
+        }
+      });
+    } else if (match[3] !== undefined) {
+      // 加粗: **text**
+      richTextArray.push({
+        type: 'text',
+        text: { content: match[3].substring(0, 2000) },
+        annotations: {
+          bold: true
+        }
+      });
+    } else if (match[4] !== undefined) {
+      // 斜体: *text*
+      richTextArray.push({
+        type: 'text',
+        text: { content: match[4].substring(0, 2000) },
+        annotations: {
+          italic: true
+        }
+      });
+    } else if (match[5] !== undefined) {
+      // 行内代码: `code`
+      richTextArray.push({
+        type: 'text',
+        text: { content: match[5].substring(0, 2000) },
+        annotations: {
+          code: true
+        }
+      });
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // 添加最后剩余的普通文本
+  if (lastIndex < text.length) {
+    const remainingText = text.substring(lastIndex);
+    if (remainingText) {
+      richTextArray.push({
+        type: 'text',
+        text: { content: remainingText.substring(0, 2000) }
+      });
+    }
+  }
+
+  // 如果没有匹配到任何格式，返回原始文本
+  if (richTextArray.length === 0) {
+    return [{
+      type: 'text',
+      text: { content: text.substring(0, 2000) }
+    }];
+  }
+
+  return richTextArray;
+}
+
 // 构建 Notion Page 数据
 function buildNotionPageData(postData, config) {
   const properties = {};
@@ -1168,26 +1257,23 @@ function buildNotionPageData(postData, config) {
             }
           });
         } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
-          // V4.0.2: 支持无序列表
+          // V4.0.2+V4.2.3: 支持无序列表（含链接解析）
+          const listText = trimmedLine.substring(2);
           children.push({
             object: 'block',
             type: 'bulleted_list_item',
             bulleted_list_item: {
-              rich_text: [{
-                text: { content: trimmedLine.substring(2).substring(0, 2000) }
-              }]
+              rich_text: parseMarkdownToRichText(listText)
             }
           });
         } else if (/^\d+\.\s/.test(trimmedLine)) {
-          // V4.0.2: 支持有序列表
+          // V4.0.2+V4.2.3: 支持有序列表（含链接解析）
           const listContent = trimmedLine.replace(/^\d+\.\s/, '');
           children.push({
             object: 'block',
             type: 'numbered_list_item',
             numbered_list_item: {
-              rich_text: [{
-                text: { content: listContent.substring(0, 2000) }
-              }]
+              rich_text: parseMarkdownToRichText(listContent)
             }
           });
         } else if (trimmedLine === '---' || trimmedLine === '***') {
@@ -1198,16 +1284,21 @@ function buildNotionPageData(postData, config) {
             divider: {}
           });
         } else if (/^!\[.*?\]\((https?:\/\/[^)]+)\)$/.test(trimmedLine)) {
-          // V4.0.2: 支持图片 ![alt](url)
+          // V4.0.2+V4.2.3: 支持图片 ![alt](url)，包括 GitHub 图片 URL 修复
           const imgMatch = trimmedLine.match(/^!\[.*?\]\((https?:\/\/[^)]+)\)$/);
           if (imgMatch && imgMatch[1]) {
+            let imgUrl = imgMatch[1];
+            // 修复 GitHub 图片 URL：将 blob URL 转换为 raw URL
+            if (imgUrl.includes('github.com') && imgUrl.includes('/blob/')) {
+              imgUrl = imgUrl.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+            }
             children.push({
               object: 'block',
               type: 'image',
               image: {
                 type: 'external',
                 external: {
-                  url: imgMatch[1]
+                  url: imgUrl
                 }
               }
             });
@@ -1276,16 +1367,89 @@ function buildNotionPageData(postData, config) {
             }
           }
         } else if (/^\[.+\]\((https?:\/\/[^)]+)\)$/.test(trimmedLine)) {
-          // V4.0.3: 纯链接行转为 bookmark（链接预览卡片）
+          // V4.2.3: 纯链接行智能转换（根据链接类型选择最佳块类型）
           const linkMatch = trimmedLine.match(/^\[.+\]\((https?:\/\/[^)]+)\)$/);
           if (linkMatch && linkMatch[1]) {
-            children.push({
-              object: 'block',
-              type: 'bookmark',
-              bookmark: {
-                url: linkMatch[1]
-              }
-            });
+            const linkUrl = linkMatch[1].toLowerCase();
+
+            // 检测视频直链 (.mp4, .webm, .mov, .avi, .mkv)
+            if (/\.(mp4|webm|mov|avi|mkv)(\?.*)?$/i.test(linkUrl)) {
+              children.push({
+                object: 'block',
+                type: 'video',
+                video: {
+                  type: 'external',
+                  external: { url: linkMatch[1] }
+                }
+              });
+            }
+            // 检测音频直链 (.mp3, .wav, .ogg, .m4a, .flac)
+            else if (/\.(mp3|wav|ogg|m4a|flac|aac)(\?.*)?$/i.test(linkUrl)) {
+              children.push({
+                object: 'block',
+                type: 'audio',
+                audio: {
+                  type: 'external',
+                  external: { url: linkMatch[1] }
+                }
+              });
+            }
+            // 检测视频平台链接（YouTube, Vimeo, Bilibili, 优酷等）
+            else if (/youtube\.com\/watch|youtu\.be\/|vimeo\.com\/\d+/i.test(linkUrl)) {
+              // YouTube/Vimeo 使用原生 video 块
+              children.push({
+                object: 'block',
+                type: 'video',
+                video: {
+                  type: 'external',
+                  external: { url: linkMatch[1] }
+                }
+              });
+            }
+            else if (/bilibili\.com\/video|b23\.tv|v\.youku\.com|youku\.com\/v_show|v\.qq\.com|weixin\.qq\.com\/sph|ixigua\.com|toutiao\.com\/video|douyin\.com|tiktok\.com/i.test(linkUrl)) {
+              // V4.2.3: 国内视频平台使用 bookmark 块（展示预览卡片，点击跳转播放）
+              // 注：Notion embed 块不支持国内视频平台，使用 bookmark 更可靠
+              // 支持：Bilibili、优酷、腾讯视频、视频号、西瓜视频、抖音、TikTok
+              children.push({
+                object: 'block',
+                type: 'bookmark',
+                bookmark: { url: linkMatch[1] }
+              });
+            }
+            // 检测网盘/云存储链接（使用 bookmark 展示预览卡片）
+            else if (/drive\.google\.com|docs\.google\.com|onedrive\.live\.com|1drv\.ms|dropbox\.com|pan\.baidu\.com|aliyundrive\.com|cloud\.189\.cn|weiyun\.com/i.test(linkUrl)) {
+              children.push({
+                object: 'block',
+                type: 'bookmark',
+                bookmark: { url: linkMatch[1] }
+              });
+            }
+            // 检测办公文件链接 (PDF, Word, Excel, PPT, SVG)
+            else if (/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|svg)(\?.*)?$/i.test(linkUrl)) {
+              // 使用 bookmark 块展示文件链接预览
+              children.push({
+                object: 'block',
+                type: 'bookmark',
+                bookmark: { url: linkMatch[1] }
+              });
+            }
+            // 检测 GitHub 仓库/文件链接
+            else if (/github\.com\/[^/]+\/[^/]+/i.test(linkUrl)) {
+              // GitHub 链接使用 bookmark 展示预览卡片
+              children.push({
+                object: 'block',
+                type: 'bookmark',
+                bookmark: { url: linkMatch[1] }
+              });
+            }
+            // 其他普通链接使用 bookmark（链接预览卡片）
+            else {
+              children.push({
+                object: 'block',
+                type: 'bookmark',
+                bookmark: { url: linkMatch[1] }
+              });
+            }
           }
         } else if (/^> \*\*(.+)\*\*$/.test(trimmedLine)) {
           // V4.0.3: 引用块标题（onebox 格式）转为 quote block
@@ -1315,30 +1479,34 @@ function buildNotionPageData(postData, config) {
             });
           }
         } else if (/^>\s+/.test(trimmedLine)) {
-          // V4.0.3: 普通引用行转为 quote block
+          // V4.0.3+V4.2.3: 普通引用行转为 quote block（含链接解析）
           const quoteText = trimmedLine.replace(/^>\s*/, '');
           if (quoteText && !quoteText.startsWith('![')) {
             children.push({
               object: 'block',
               type: 'quote',
               quote: {
-                rich_text: [{
-                  text: { content: quoteText.substring(0, 2000) }
-                }]
+                rich_text: parseMarkdownToRichText(quoteText)
               }
             });
           }
         } else {
-          // 普通段落（可能包含内联图片，转为链接显示）
-          // 将内联图片 ![alt](url) 转为 [alt](url) 链接文本
-          const textWithLinks = trimmedLine.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '[$1]($2)');
+          // V4.2.3: 普通段落（可能包含内联图片和链接）
+          // 将内联图片 ![alt](url) 转为 [图片](url) 链接文本，并修复 GitHub 图片 URL
+          const textWithLinks = trimmedLine.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+            // 修复 GitHub 图片 URL
+            let fixedUrl = url;
+            if (url.includes('github.com') && url.includes('/blob/')) {
+              fixedUrl = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+            }
+            return `[图片: ${alt}](${fixedUrl})`;
+          });
+          // 使用 parseMarkdownToRichText 解析链接和格式为 Notion 格式
           children.push({
             object: 'block',
             type: 'paragraph',
             paragraph: {
-              rich_text: [{
-                text: { content: textWithLinks.substring(0, 2000) }
-              }]
+              rich_text: parseMarkdownToRichText(textWithLinks)
             }
           });
         }
