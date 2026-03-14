@@ -1,8 +1,35 @@
-// Discourse Saver V4.2.2 - 设置页面
+// Discourse Saver V4.2.3 - 设置页面
 // 支持 Obsidian、飞书多维表格和 Notion
 // V3.6.0: 支持所有 Discourse 论坛 + 自定义站点管理 + 可折叠面板
 // V4.0.1: 新增 Notion Database 保存功能
 // V4.0.2: 修复换行渲染问题
+// V4.2.3: Notion 属性默认值根据语言自动切换
+
+// V4.2.3: Notion 属性的语言相关默认值
+const NOTION_PROP_DEFAULTS = {
+  zh: {
+    notionPropTitle: '标题',
+    notionPropUrl: '链接',
+    notionPropAuthor: '作者',
+    notionPropCategory: '分类',
+    notionPropSavedDate: '保存日期',
+    notionPropCommentCount: '评论数'
+  },
+  en: {
+    notionPropTitle: 'Title',
+    notionPropUrl: 'Link',
+    notionPropAuthor: 'Author',
+    notionPropCategory: 'Category',
+    notionPropSavedDate: 'Save Date',
+    notionPropCommentCount: 'Comments'
+  }
+};
+
+// 获取当前语言的 Notion 默认属性值
+function getNotionPropDefault(propName, lang) {
+  const defaults = NOTION_PROP_DEFAULTS[lang] || NOTION_PROP_DEFAULTS.zh;
+  return defaults[propName] || '';
+}
 
 // 默认配置
 const DEFAULT_CONFIG = {
@@ -31,15 +58,16 @@ const DEFAULT_CONFIG = {
 
   // Notion 设置 (V4.0.1)
   // V4.0.2: 默认属性名改为中文
+  // V4.2.3: 根据浏览器语言自动选择中/英文默认值
   saveToNotion: false,
   notionToken: '',
   notionDatabaseId: '',
-  notionPropTitle: '标题',
-  notionPropUrl: '链接',
-  notionPropAuthor: '作者',
-  notionPropCategory: '分类',
-  notionPropSavedDate: '保存日期',
-  notionPropCommentCount: '评论数',
+  notionPropTitle: '',  // 动态设置
+  notionPropUrl: '',
+  notionPropAuthor: '',
+  notionPropCategory: '',
+  notionPropSavedDate: '',
+  notionPropCommentCount: '',
 
   // 内容设置
   addMetadata: true,
@@ -181,9 +209,13 @@ function removeSite(index) {
 
 // 加载配置
 function loadOptions() {
-  chrome.storage.sync.get(DEFAULT_CONFIG, (config) => {
-    // 插件开关
-    document.getElementById('pluginEnabled').checked = config.pluginEnabled;
+  // V4.2.3: 先获取语言设置，再加载配置
+  chrome.storage.local.get(['uiLanguage'], (langResult) => {
+    const lang = langResult.uiLanguage || 'zh';
+
+    chrome.storage.sync.get(DEFAULT_CONFIG, (config) => {
+      // 插件开关
+      document.getElementById('pluginEnabled').checked = config.pluginEnabled;
 
     // 自定义站点 (V3.6.0)
     renderCustomSites(config.customSites || []);
@@ -206,15 +238,16 @@ function loadOptions() {
     document.getElementById('feishuUploadAttachment').checked = config.feishuUploadAttachment;
 
     // Notion 设置 (V4.0.1)
+    // V4.2.3: 根据语言使用对应的默认值
     document.getElementById('saveToNotion').checked = config.saveToNotion;
     document.getElementById('notionToken').value = config.notionToken || '';
     document.getElementById('notionDatabaseId').value = config.notionDatabaseId || '';
-    document.getElementById('notionPropTitle').value = config.notionPropTitle || 'Title';
-    document.getElementById('notionPropUrl').value = config.notionPropUrl || 'URL';
-    document.getElementById('notionPropAuthor').value = config.notionPropAuthor || 'Author';
-    document.getElementById('notionPropCategory').value = config.notionPropCategory || 'Category';
-    document.getElementById('notionPropSavedDate').value = config.notionPropSavedDate || 'Saved Date';
-    document.getElementById('notionPropCommentCount').value = config.notionPropCommentCount || 'Comments';
+    document.getElementById('notionPropTitle').value = config.notionPropTitle || getNotionPropDefault('notionPropTitle', lang);
+    document.getElementById('notionPropUrl').value = config.notionPropUrl || getNotionPropDefault('notionPropUrl', lang);
+    document.getElementById('notionPropAuthor').value = config.notionPropAuthor || getNotionPropDefault('notionPropAuthor', lang);
+    document.getElementById('notionPropCategory').value = config.notionPropCategory || getNotionPropDefault('notionPropCategory', lang);
+    document.getElementById('notionPropSavedDate').value = config.notionPropSavedDate || getNotionPropDefault('notionPropSavedDate', lang);
+    document.getElementById('notionPropCommentCount').value = config.notionPropCommentCount || getNotionPropDefault('notionPropCommentCount', lang);
 
     // 内容设置
     document.getElementById('addMetadata').checked = config.addMetadata;
@@ -242,6 +275,7 @@ function loadOptions() {
 
     // 确保所有面板默认展开
     expandAllSections();
+    });
   });
 }
 

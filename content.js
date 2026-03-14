@@ -66,16 +66,43 @@
 
     // V4.0.1: Notion 设置
     // V4.0.2: 默认属性名改为中文
+    // V4.2.3: 保持空值，使用时根据语言动态获取（在 saveToObsidian 函数中处理）
     saveToNotion: false,
     notionToken: '',
     notionDatabaseId: '',
-    notionPropTitle: '标题',
-    notionPropUrl: '链接',
-    notionPropAuthor: '作者',
-    notionPropCategory: '分类',
-    notionPropSavedDate: '保存日期',
-    notionPropCommentCount: '评论数'
+    notionPropTitle: '',
+    notionPropUrl: '',
+    notionPropAuthor: '',
+    notionPropCategory: '',
+    notionPropSavedDate: '',
+    notionPropCommentCount: ''
   };
+
+  // V4.2.3: Notion 属性的语言相关默认值
+  const NOTION_PROP_DEFAULTS = {
+    zh: {
+      notionPropTitle: '标题',
+      notionPropUrl: '链接',
+      notionPropAuthor: '作者',
+      notionPropCategory: '分类',
+      notionPropSavedDate: '保存日期',
+      notionPropCommentCount: '评论数'
+    },
+    en: {
+      notionPropTitle: 'Title',
+      notionPropUrl: 'Link',
+      notionPropAuthor: 'Author',
+      notionPropCategory: 'Category',
+      notionPropSavedDate: 'Save Date',
+      notionPropCommentCount: 'Comments'
+    }
+  };
+
+  // 获取当前语言的 Notion 默认属性值
+  function getNotionPropDefault(propName, lang) {
+    const defaults = NOTION_PROP_DEFAULTS[lang] || NOTION_PROP_DEFAULTS.zh;
+    return defaults[propName] || '';
+  }
 
   // V4.2.2: Promise 包装 chrome.runtime.sendMessage（感谢 @Gannyn 提供并行保存方案）
   // 用于并行执行飞书和 Notion 保存操作
@@ -1391,7 +1418,11 @@
     try {
       // 获取配置
       const config = await chrome.storage.sync.get(DEFAULT_CONFIG);
+      // V4.2.3: 获取语言设置，用于 Notion 属性默认值
+      const langResult = await chrome.storage.local.get(['uiLanguage']);
+      const uiLang = langResult.uiLanguage || 'zh';
       console.log('[Discourse Saver] 读取到的配置:', config);
+      console.log('[Discourse Saver] UI语言:', uiLang);
       console.log('[Discourse Saver] 目标楼层:', targetPostNumber || '主帖');
 
       // 提取正文内容
@@ -1651,17 +1682,18 @@
           category = categoryBadge.textContent.trim();
         }
 
+        // V4.2.3: 使用语言相关的默认值
         const notionTask = sendMessageAsync({
           action: 'saveToNotion',
           config: {
             notionToken: config.notionToken,
             notionDatabaseId: config.notionDatabaseId,
-            notionPropTitle: config.notionPropTitle || 'Title',
-            notionPropUrl: config.notionPropUrl || 'URL',
-            notionPropAuthor: config.notionPropAuthor || 'Author',
-            notionPropCategory: config.notionPropCategory || 'Category',
-            notionPropSavedDate: config.notionPropSavedDate || 'Saved Date',
-            notionPropCommentCount: config.notionPropCommentCount || 'Comments'
+            notionPropTitle: config.notionPropTitle || getNotionPropDefault('notionPropTitle', uiLang),
+            notionPropUrl: config.notionPropUrl || getNotionPropDefault('notionPropUrl', uiLang),
+            notionPropAuthor: config.notionPropAuthor || getNotionPropDefault('notionPropAuthor', uiLang),
+            notionPropCategory: config.notionPropCategory || getNotionPropDefault('notionPropCategory', uiLang),
+            notionPropSavedDate: config.notionPropSavedDate || getNotionPropDefault('notionPropSavedDate', uiLang),
+            notionPropCommentCount: config.notionPropCommentCount || getNotionPropDefault('notionPropCommentCount', uiLang)
           },
           postData: {
             title: notionTitle,
