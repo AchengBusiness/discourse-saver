@@ -475,13 +475,20 @@ async function testFeishuConnection() {
 
         if (chrome.runtime.lastError) {
           showStatus('测试失败: ' + chrome.runtime.lastError.message, 'error');
+          showToast('❌ 飞书连接测试失败', 'error');
           return;
         }
 
         if (response.success) {
           showStatus(response.message, 'success');
+          showToast('✅ 飞书连接测试成功', 'success');
+          btn.textContent = '✅ 已连接';
+          setTimeout(() => {
+            btn.textContent = originalText;
+          }, 1200);
         } else {
           showStatus('连接失败: ' + response.error, 'error');
+          showToast('❌ 飞书连接测试失败', 'error');
         }
       }
     );
@@ -543,13 +550,20 @@ async function testNotionConnection() {
 
         if (chrome.runtime.lastError) {
           showStatus('测试失败: ' + chrome.runtime.lastError.message, 'error');
+          showToast('❌ Notion 连接测试失败', 'error');
           return;
         }
 
         if (response.success) {
           showStatus(response.message, 'success');
+          showToast('✅ Notion 连接测试成功', 'success');
+          btn.textContent = '✅ 已连接';
+          setTimeout(() => {
+            btn.textContent = originalText;
+          }, 1200);
         } else {
           showStatus('连接失败: ' + response.error, 'error');
+          showToast('❌ Notion 连接测试失败', 'error');
         }
       }
     );
@@ -563,12 +577,43 @@ async function testNotionConnection() {
 // 显示状态
 function showStatus(message, type) {
   const statusElement = document.getElementById('statusMessage');
-  statusElement.textContent = message;
+  statusElement.textContent = message || '';
+  statusElement.style.whiteSpace = 'pre-wrap'; // 保留换行，便于显示测试详情
   statusElement.className = `status-message ${type} show`;
 
+  const hideDelay = type === 'success' ? 5000 : 3000;
   setTimeout(() => {
     statusElement.classList.remove('show');
-  }, 3000);
+  }, hideDelay);
+}
+
+// 浮动提示（确保用户在任意滚动位置都能看到结果）
+function showToast(message, type = 'info') {
+  if (!message) return;
+
+  const oldToast = document.getElementById('floatingStatusToast');
+  if (oldToast) oldToast.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'floatingStatusToast';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 99999;
+    max-width: 360px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    color: #fff;
+    background: ${type === 'success' ? '#059669' : type === 'error' ? '#dc2626' : '#2563eb'};
+  `;
+
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2600);
 }
 
 // 初始化

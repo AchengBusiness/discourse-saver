@@ -1384,6 +1384,128 @@
 
       // V3.5: 检查是否需要保存到 Obsidian
       const shouldSaveToObsidian = config.saveToObsidian !== false; // 默认为 true
+      const feishuConfigComplete = config.saveToFeishu &&
+        config.feishuAppId &&
+        config.feishuAppSecret &&
+        config.feishuAppToken &&
+        config.feishuTableId;
+      const notionConfigComplete = config.saveToNotion &&
+        config.notionToken &&
+        config.notionDatabaseId;
+
+      const sendMessageAsync = (message) => new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(message, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+            return;
+          }
+          resolve(response);
+        });
+      });
+
+      const buildRemoteTarget = () => {
+        let cleanUrl = url.replace(/#.*$/, '').replace(/\?.*$/, '');
+        let remoteUrl = cleanUrl;
+        let remoteTitle = title;
+
+        if (isSingleCommentMode) {
+          const match = cleanUrl.match(/^(.*\/t\/[^/]+\/\d+)(\/\d+)?$/);
+          if (match) {
+            cleanUrl = match[1];
+          }
+          remoteUrl = `${cleanUrl}/${targetPostNumber}`;
+          remoteTitle = `${title} [${targetPostNumber}楼]`;
+        }
+
+        return { remoteUrl, remoteTitle };
+      };
+
+      const { remoteUrl, remoteTitle } = buildRemoteTarget();
+      const remoteSaveTasks = [];
+
+      // Dispatch remote targets before Obsidian, so each target is independent.
+      if (feishuConfigComplete) {
+        remoteSaveTasks.push(
+          sendMessageAsync({
+            action: 'saveToFeishu',
+            config: {
+              apiDomain: config.feishuApiDomain || 'feishu',
+              appId: config.feishuAppId,
+              appSecret: config.feishuAppSecret,
+              appToken: config.feishuAppToken,
+              tableId: config.feishuTableId,
+              uploadAttachment: config.feishuUploadAttachment || false
+            },
+            postData: {
+              title: remoteTitle,
+              url: remoteUrl,
+              author: author,
+              content: markdown,
+              commentCount: comments.length
+            }
+          }).then((response) => {
+            if (response && response.success) {
+              const actionText = response.action === 'updated' ? '已更新' : '已保存';
+              showNotification(`飞书${actionText}成功`, 'success');
+            } else if (response) {
+              console.error('[Discourse Saver→Feishu] Save failed:', response.error);
+              showNotification('飞书保存失败: ' + response.error, 'error');
+            }
+          }).catch((error) => {
+            console.error('[Discourse Saver→Feishu] Message failed:', error);
+            showNotification('飞书保存失败', 'error');
+          })
+        );
+      }
+
+      if (notionConfigComplete) {
+        let category = '';
+        const categoryBadge = document.querySelector('.topic-category .badge-category__name');
+        if (categoryBadge) {
+          category = categoryBadge.textContent.trim();
+        }
+
+        remoteSaveTasks.push(
+          sendMessageAsync({
+            action: 'saveToNotion',
+            config: {
+              notionToken: config.notionToken,
+              notionDatabaseId: config.notionDatabaseId,
+              notionPropTitle: config.notionPropTitle || 'Title',
+              notionPropUrl: config.notionPropUrl || 'URL',
+              notionPropAuthor: config.notionPropAuthor || 'Author',
+              notionPropCategory: config.notionPropCategory || 'Category',
+              notionPropSavedDate: config.notionPropSavedDate || 'Saved Date',
+              notionPropCommentCount: config.notionPropCommentCount || 'Comments'
+            },
+            postData: {
+              title: remoteTitle,
+              url: remoteUrl,
+              author: author,
+              content: markdown,
+              category: category,
+              commentCount: comments.length
+            }
+          }).then((response) => {
+            if (response && response.success) {
+              showNotification('Notion 保存成功', 'success');
+            } else if (response) {
+              console.error('[Discourse Saver→Notion] Save failed:', response.error);
+              showNotification('Notion 保存失败: ' + response.error, 'error');
+            }
+          }).catch((error) => {
+            console.error('[Discourse Saver→Notion] Message failed:', error);
+            showNotification('Notion 保存失败', 'error');
+          })
+        );
+      }
+
+      if (remoteSaveTasks.length > 0) {
+        // 云端保存异步进行，不阻塞 Obsidian 流程，确保目标之间互不影响
+        Promise.allSettled(remoteSaveTasks).catch((error) => {
+          console.error('[Discourse Saver] remote save tasks error:', error);
+        });
+      }
 
       // V3.4.1: Advanced URI 优先模式
       // 当启用 Advanced URI 时，始终使用它（更可靠，无大小限制）
@@ -1454,150 +1576,6 @@
         } else {
           showNotification('已保存到Obsidian', 'success');
         }
-      }
-
-      // V3.5: 检查飞书配置是否完整，如果完整则同步保存到飞书
-      const feishuConfigComplete = config.saveToFeishu &&
-        config.feishuAppId &&
-        config.feishuAppSecret &&
-        config.feishuAppToken &&
-        config.feishuTableId;
-
-      if (feishuConfigComplete) {
-        console.log('[Discourse Saver→飞书] 检测到飞书配置，开始同步...');
-        // V4.0.6: 显示保存中提示（特别是只启用飞书时，让用户知道操作正在进行）
-        showNotification('正在保存到飞书...', 'info');
-
-        // V3.5.5: 统一清理URL，移除查询参数和锚点，确保URL一致性
-        // 先清理基础URL
-        let cleanUrl = url.replace(/#.*$/, '').replace(/\?.*$/, '');
-
-        // V3.5.4: 评论书签保存时，URL和标题加上楼层标识，避免覆盖主帖记录
-        // Discourse 的楼层 URL 格式是 /t/topic-slug/123/2（直接加楼层号）
-        let feishuUrl = cleanUrl;
-        let feishuTitle = title;
-        if (isSingleCommentMode) {
-          // URL格式: /t/topic-slug/123 或 /t/topic-slug/123/2
-          // 需要保留帖子ID（第一个数字），只替换/添加楼层号（第二个数字）
-          // 检查URL是否已经有楼层号（格式：/t/slug/123/2）
-          // 匹配：保留到帖子ID为止，移除可能存在的楼层号
-          const match = cleanUrl.match(/^(.*\/t\/[^/]+\/\d+)(\/\d+)?$/);
-          if (match) {
-            cleanUrl = match[1]; // 保留 /t/slug/123 部分
-          }
-
-          feishuUrl = `${cleanUrl}/${targetPostNumber}`;  // /t/xxx/123/2 可正常跳转
-          feishuTitle = `${title} [${targetPostNumber}楼]`;
-        }
-
-        chrome.runtime.sendMessage({
-          action: 'saveToFeishu',
-          config: {
-            apiDomain: config.feishuApiDomain || 'feishu',
-            appId: config.feishuAppId,
-            appSecret: config.feishuAppSecret,
-            appToken: config.feishuAppToken,
-            tableId: config.feishuTableId,
-            uploadAttachment: config.feishuUploadAttachment || false
-          },
-          postData: {
-            title: feishuTitle,
-            url: feishuUrl,
-            author: author,
-            content: markdown,
-            commentCount: comments.length
-          }
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('[Discourse Saver→飞书] 发送消息失败:', chrome.runtime.lastError);
-            showNotification('飞书保存失败: 扩展通信错误', 'error');
-            return;
-          }
-
-          if (response && response.success) {
-            const actionText = response.action === 'updated' ? '已更新' : '已保存';
-            showNotification(`飞书${actionText}成功`, 'success');
-          } else if (response && response.error) {
-            console.error('[Discourse Saver→飞书] 保存失败:', response.error);
-            showNotification('飞书保存失败: ' + response.error, 'error');
-          } else {
-            // V4.0.6: 处理未知响应情况
-            console.error('[Discourse Saver→飞书] 未收到有效响应');
-            showNotification('飞书保存失败: 未知错误', 'error');
-          }
-        });
-      }
-
-      // V4.0.1: 检查 Notion 配置是否完整，如果完整则同步保存到 Notion
-      const notionConfigComplete = config.saveToNotion &&
-        config.notionToken &&
-        config.notionDatabaseId;
-
-      if (notionConfigComplete) {
-        console.log('[Discourse Saver→Notion] 检测到 Notion 配置，开始同步...');
-        // V4.0.6: 显示保存中提示
-        showNotification('正在保存到 Notion...', 'info');
-
-        // 清理URL，移除查询参数和锚点
-        let cleanNotionUrl = url.replace(/#.*$/, '').replace(/\?.*$/, '');
-
-        // 评论书签保存时，URL和标题加上楼层标识
-        let notionUrl = cleanNotionUrl;
-        let notionTitle = title;
-        if (isSingleCommentMode) {
-          const match = cleanNotionUrl.match(/^(.*\/t\/[^/]+\/\d+)(\/\d+)?$/);
-          if (match) {
-            cleanNotionUrl = match[1];
-          }
-          notionUrl = `${cleanNotionUrl}/${targetPostNumber}`;
-          notionTitle = `${title} [${targetPostNumber}楼]`;
-        }
-
-        // 获取分类信息
-        let category = '';
-        const categoryBadge = document.querySelector('.topic-category .badge-category__name');
-        if (categoryBadge) {
-          category = categoryBadge.textContent.trim();
-        }
-
-        chrome.runtime.sendMessage({
-          action: 'saveToNotion',
-          config: {
-            notionToken: config.notionToken,
-            notionDatabaseId: config.notionDatabaseId,
-            notionPropTitle: config.notionPropTitle || 'Title',
-            notionPropUrl: config.notionPropUrl || 'URL',
-            notionPropAuthor: config.notionPropAuthor || 'Author',
-            notionPropCategory: config.notionPropCategory || 'Category',
-            notionPropSavedDate: config.notionPropSavedDate || 'Saved Date',
-            notionPropCommentCount: config.notionPropCommentCount || 'Comments'
-          },
-          postData: {
-            title: notionTitle,
-            url: notionUrl,
-            author: author,
-            content: markdown,
-            category: category,
-            commentCount: comments.length
-          }
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('[Discourse Saver→Notion] 发送消息失败:', chrome.runtime.lastError);
-            showNotification('Notion 保存失败: 扩展通信错误', 'error');
-            return;
-          }
-
-          if (response && response.success) {
-            showNotification('Notion 保存成功', 'success');
-          } else if (response && response.error) {
-            console.error('[Discourse Saver→Notion] 保存失败:', response.error);
-            showNotification('Notion 保存失败: ' + response.error, 'error');
-          } else {
-            // V4.0.6: 处理未知响应情况
-            console.error('[Discourse Saver→Notion] 未收到有效响应');
-            showNotification('Notion 保存失败: 未知错误', 'error');
-          }
-        });
       }
 
       // V4.0.1: 如果所有保存目标都没有启用，提示用户
