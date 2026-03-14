@@ -716,6 +716,17 @@
                 <div class="help-text" data-i18n="notion.databaseIdHelpDetail">从 Database 链接中复制，格式为 32 位字符（可含连字符）</div>
               </div>
 
+              <!-- V4.2.3: 图片嵌入提示 -->
+              <div class="warning-box" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="color: #d97706;">⚠️</span>
+                  <div style="font-size: 12px; color: #92400e;">
+                    <strong data-i18n="notion.imageWarningTitle">图片嵌入注意</strong>
+                    <p style="margin: 4px 0 0 0;" data-i18n="notion.imageWarningContent">如果开启了"图片嵌入（Base64）"功能，Notion 将无法显示图片（Notion 不支持 Base64 格式）。建议关闭图片嵌入或仅用于 Obsidian。</p>
+                  </div>
+                </div>
+              </div>
+
               <div class="form-group">
                 <label data-i18n="notion.propertyMapping">属性映射配置</label>
                 <div class="help-text" style="margin-bottom: 8px;" data-i18n="notion.propertyMappingHelp">属性名需与 Notion Database 中的列名完全匹配（区分大小写）</div>

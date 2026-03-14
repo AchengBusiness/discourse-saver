@@ -121,7 +121,9 @@ const i18n = {
       configStep2e: '   • 保存日期（Date 类型）',
       configStep2f: '   • 评论数（Number 类型）',
       configStep3: '3. 在 Database 页面点击「...」→「Connections」→ 添加你的 Integration',
-      configStep4: '4. 从 Database 链接中复制 ID 并填入上方'
+      configStep4: '4. 从 Database 链接中复制 ID 并填入上方',
+      imageWarningTitle: '图片嵌入注意',
+      imageWarningContent: '如果开启了"图片嵌入（Base64）"功能，Notion 将无法显示图片（Notion 不支持 Base64 格式）。建议关闭图片嵌入或仅用于 Obsidian。'
     },
     content: {
       addMetadata: '添加元数据（来源、作者、时间等）',
@@ -312,7 +314,9 @@ const i18n = {
       configStep2e: '   • Save Date (Date type)',
       configStep2f: '   • Comments (Number type)',
       configStep3: '3. Click "..." → "Connections" → Add your Integration on Database page',
-      configStep4: '4. Copy ID from Database link and paste above'
+      configStep4: '4. Copy ID from Database link and paste above',
+      imageWarningTitle: 'Image Embedding Notice',
+      imageWarningContent: 'If "Embed images (Base64)" is enabled, Notion cannot display images (Notion does not support Base64 format). Recommend disabling image embedding or using only for Obsidian.'
     },
     content: {
       addMetadata: 'Add metadata (source, author, time, etc.)',

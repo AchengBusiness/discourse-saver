@@ -917,6 +917,147 @@ function formatNotionDatabaseId(id) {
   return id.replace(/-/g, '').trim();
 }
 
+// V4.2.3: 搜索 Notion 现有记录（通过 URL 查找）
+async function searchNotionRecord(token, databaseId, url, urlPropName) {
+  console.log('[Discourse Saver→Notion] 搜索现有记录，URL:', url);
+
+  try {
+    const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Notion-Version': NOTION_API_VERSION,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        filter: {
+          property: urlPropName,
+          url: {
+            equals: url
+          }
+        },
+        page_size: 1
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('[Discourse Saver→Notion] 搜索失败:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    if (data.results && data.results.length > 0) {
+      console.log('[Discourse Saver→Notion] 找到现有记录:', data.results[0].id);
+      return data.results[0];
+    }
+
+    console.log('[Discourse Saver→Notion] 未找到现有记录');
+    return null;
+  } catch (error) {
+    console.warn('[Discourse Saver→Notion] 搜索异常:', error);
+    return null;
+  }
+}
+
+// V4.2.3: 删除 Notion 页面的所有子块
+async function deleteNotionPageChildren(token, pageId) {
+  try {
+    // 获取所有子块
+    const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children?page_size=100`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Notion-Version': NOTION_API_VERSION
+      }
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const blocks = data.results || [];
+
+    // 逐个删除
+    for (const block of blocks) {
+      try {
+        await fetch(`https://api.notion.com/v1/blocks/${block.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Notion-Version': NOTION_API_VERSION
+          }
+        });
+      } catch (e) {
+        console.warn('[Discourse Saver→Notion] 删除块失败:', e);
+      }
+    }
+
+    console.log(`[Discourse Saver→Notion] 已删除 ${blocks.length} 个旧块`);
+  } catch (error) {
+    console.warn('[Discourse Saver→Notion] 删除子块异常:', error);
+  }
+}
+
+// V4.2.3: 更新 Notion 页面
+async function updateNotionPage(token, pageId, pageData) {
+  console.log('[Discourse Saver→Notion] 更新页面:', pageId);
+
+  // 1. 更新属性
+  const updateResponse = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Notion-Version': NOTION_API_VERSION,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      properties: pageData.properties
+    })
+  });
+
+  if (!updateResponse.ok) {
+    const errorData = await updateResponse.json().catch(() => ({}));
+    throw new Error(parseNotionError(updateResponse.status, errorData, '更新属性'));
+  }
+
+  // 2. 删除旧内容
+  await deleteNotionPageChildren(token, pageId);
+
+  // 3. 添加新内容
+  const NOTION_CHILDREN_LIMIT = 100;
+  const allChildren = pageData.children || [];
+
+  for (let i = 0; i < allChildren.length; i += NOTION_CHILDREN_LIMIT) {
+    const batch = allChildren.slice(i, i + NOTION_CHILDREN_LIMIT);
+
+    try {
+      const appendResponse = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': NOTION_API_VERSION,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ children: batch })
+      });
+
+      if (!appendResponse.ok) {
+        console.warn('[Discourse Saver→Notion] 追加内容失败:', appendResponse.status);
+      }
+
+      // 防止请求过快
+      if (i + NOTION_CHILDREN_LIMIT < allChildren.length) {
+        await new Promise(r => setTimeout(r, 200));
+      }
+    } catch (e) {
+      console.warn('[Discourse Saver→Notion] 追加内容异常:', e);
+    }
+  }
+
+  console.log('[Discourse Saver→Notion] 更新完成');
+
+  const result = await updateResponse.json();
+  return result;
+}
+
 // 构建 Notion Page 数据
 function buildNotionPageData(postData, config) {
   const properties = {};
@@ -1212,6 +1353,7 @@ function buildNotionPageData(postData, config) {
 
 // 保存到 Notion
 // V4.0.6: 支持分批创建children（Notion API限制每次最多100个块）
+// V4.2.3: 支持更新现有记录（通过URL查找，避免重复）
 async function saveToNotion(postData, config) {
   console.log('[Discourse Saver→Notion] 开始保存...');
   console.log('[Discourse Saver→Notion] 标题:', postData.title);
@@ -1227,6 +1369,25 @@ async function saveToNotion(postData, config) {
 
   // 构建页面数据
   const pageData = buildNotionPageData(postData, config);
+
+  // V4.2.3: 搜索现有记录（通过URL查找）
+  const urlPropName = config.notionPropUrl || '链接';
+  const existingPage = await searchNotionRecord(token, databaseId, postData.url, urlPropName);
+
+  // 如果找到现有记录，更新它
+  if (existingPage) {
+    console.log('[Discourse Saver→Notion] 更新现有记录...');
+    const result = await updateNotionPage(token, existingPage.id, pageData);
+    return {
+      success: true,
+      action: 'updated',
+      pageId: existingPage.id,
+      url: existingPage.url
+    };
+  }
+
+  // 否则创建新记录
+  console.log('[Discourse Saver→Notion] 创建新记录...');
 
   // Notion API 每次最多100个children，需要分批处理
   const NOTION_CHILDREN_LIMIT = 100;

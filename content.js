@@ -1693,7 +1693,8 @@
                 }
               } else if (target === 'notion') {
                 if (response && response.success) {
-                  showNotification('Notion 保存成功', 'success');
+                  const actionText = response.action === 'updated' ? '已更新' : '已保存';
+                  showNotification(`Notion ${actionText}成功`, 'success');
                 } else {
                   console.error('[Discourse Saver→Notion] 保存失败:', response?.error);
                   showNotification('Notion 保存失败: ' + (response?.error || '未知错误'), 'error');
