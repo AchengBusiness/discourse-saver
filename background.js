@@ -2352,6 +2352,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         console.log('[Discourse Saver] 收到 HTML 下载请求:', request.filename);
 
+        // 清理文件名（Chrome downloads API 对文件名有严格要求）
+        let safeFilename = request.filename
+          .replace(/[<>:"|?*]/g, '')           // 移除Windows非法字符
+          .replace(/\\/g, '/')                  // 统一使用正斜杠
+          .replace(/\/+/g, '/')                 // 合并多个斜杠
+          .replace(/^\//, '')                   // 移除开头的斜杠
+          .replace(/\.\./g, '')                 // 移除 ..
+          .trim();
+
+        // 确保文件名不为空
+        if (!safeFilename || safeFilename === '.html') {
+          safeFilename = 'discourse-export.html';
+        }
+
+        console.log('[Discourse Saver] 清理后的文件名:', safeFilename);
+
         // 使用 data URL（Service Worker 不支持 URL.createObjectURL）
         const base64Content = btoa(unescape(encodeURIComponent(request.content)));
         const dataUrl = 'data:text/html;charset=utf-8;base64,' + base64Content;
@@ -2359,7 +2375,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 使用 chrome.downloads API 下载
         const downloadId = await chrome.downloads.download({
           url: dataUrl,
-          filename: request.filename,
+          filename: safeFilename,
           saveAs: false  // 不弹出保存对话框
         });
 
