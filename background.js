@@ -2352,21 +2352,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         console.log('[Discourse Saver] 收到 HTML 下载请求:', request.filename);
 
-        // 创建 Blob URL
-        const blob = new Blob([request.content], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
+        // 使用 data URL（Service Worker 不支持 URL.createObjectURL）
+        const base64Content = btoa(unescape(encodeURIComponent(request.content)));
+        const dataUrl = 'data:text/html;charset=utf-8;base64,' + base64Content;
 
         // 使用 chrome.downloads API 下载
         const downloadId = await chrome.downloads.download({
-          url: url,
+          url: dataUrl,
           filename: request.filename,
           saveAs: false  // 不弹出保存对话框
         });
 
         console.log('[Discourse Saver] HTML 下载已启动, downloadId:', downloadId);
-
-        // 清理 Blob URL
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
 
         sendResponse({ success: true, downloadId });
       } catch (error) {
