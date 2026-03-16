@@ -6,125 +6,24 @@
   <title>Discourse Saver 油猴脚本安装器</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 40px 20px;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      overflow: hidden;
-    }
-    .header {
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      color: white;
-      padding: 30px;
-      text-align: center;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 40px 20px; }
+    .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 30px; text-align: center; }
     .header h1 { font-size: 28px; margin-bottom: 10px; }
     .header p { opacity: 0.9; font-size: 16px; }
-    .version { 
-      display: inline-block; 
-      background: rgba(255,255,255,0.2); 
-      padding: 4px 12px; 
-      border-radius: 20px; 
-      font-size: 14px;
-      margin-top: 10px;
-    }
+    .version { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 14px; margin-top: 10px; }
     .content { padding: 30px; }
     .section { margin-bottom: 30px; }
-    .section h2 {
-      font-size: 18px;
-      color: #1f2937;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e5e7eb;
-    }
-    .btn {
-      display: inline-block;
-      padding: 14px 28px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      color: white;
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
-    }
-    .script-area {
-      width: 100%;
-      height: 300px;
-      font-family: 'Monaco', 'Menlo', monospace;
-      font-size: 12px;
-      padding: 15px;
-      border: 2px solid #e5e7eb;
-      border-radius: 8px;
-      background: #f9fafb;
-      resize: vertical;
-    }
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-    }
-    .feature {
-      padding: 15px;
-      background: #f3f4f6;
-      border-radius: 8px;
-    }
-    .feature-icon { font-size: 24px; margin-bottom: 8px; }
-    .feature-title { font-weight: 600; color: #1f2937; margin-bottom: 5px; }
-    .feature-desc { font-size: 14px; color: #6b7280; }
-    .steps { counter-reset: step; }
-    .step {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 15px;
-      padding: 15px;
-      background: #f9fafb;
-      border-radius: 8px;
-    }
-    .step::before {
-      counter-increment: step;
-      content: counter(step);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      background: #4f46e5;
-      color: white;
-      border-radius: 50%;
-      font-weight: 600;
-      margin-right: 15px;
-      flex-shrink: 0;
-    }
-    .step-content h3 { font-size: 15px; color: #1f2937; margin-bottom: 5px; }
-    .step-content p { font-size: 14px; color: #6b7280; }
+    .section h2 { font-size: 18px; color: #1f2937; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
+    .btn { display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); }
+    .script-area { width: 100%; height: 300px; font-family: 'Monaco', 'Menlo', monospace; font-size: 12px; padding: 15px; border: 2px solid #e5e7eb; border-radius: 8px; background: #f9fafb; resize: vertical; }
     .changelog { font-size: 14px; color: #4b5563; }
     .changelog ul { margin-left: 20px; margin-top: 10px; }
     .changelog li { margin-bottom: 8px; }
-    .footer {
-      text-align: center;
-      padding: 20px;
-      background: #f9fafb;
-      color: #6b7280;
-      font-size: 14px;
-    }
+    .footer { text-align: center; padding: 20px; background: #f9fafb; color: #6b7280; font-size: 14px; }
     .footer a { color: #4f46e5; text-decoration: none; }
-    .footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -132,74 +31,20 @@
     <div class="header">
       <h1>Discourse Saver</h1>
       <p>通用 Discourse 论坛内容保存工具</p>
-      <div class="version">V4.5.7</div>
+      <div class="version">V4.5.8</div>
     </div>
-    
     <div class="content">
       <div class="section">
-        <h2>功能特性</h2>
-        <div class="features">
-          <div class="feature">
-            <div class="feature-icon">📝</div>
-            <div class="feature-title">多目标保存</div>
-            <div class="feature-desc">支持 Obsidian、Notion、HTML 三种保存方式</div>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">💬</div>
-            <div class="feature-title">评论支持</div>
-            <div class="feature-desc">可保存评论，支持楼层范围和折叠模式</div>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">🖼️</div>
-            <div class="feature-title">图片嵌入</div>
-            <div class="feature-desc">Base64嵌入解决手机端图片显示问题</div>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">⚡</div>
-            <div class="feature-title">快速操作</div>
-            <div class="feature-desc">单击链接按钮保存，双击复制链接</div>
-          </div>
-        </div>
+        <h2>安装脚本</h2>
+        <p><a class="btn btn-primary" href="https://github.com/AchengBusiness/discourse-saver/raw/main/userscript/discourse-saver.user.js">一键安装脚本</a></p>
       </div>
-
-      <div class="section">
-        <h2>安装步骤</h2>
-        <div class="steps">
-          <div class="step">
-            <div class="step-content">
-              <h3>安装油猴扩展</h3>
-              <p>Chrome/Edge 安装 <a href="https://www.tampermonkey.net/" target="_blank">Tampermonkey</a>，Firefox 安装 <a href="https://violentmonkey.github.io/" target="_blank">Violentmonkey</a></p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-content">
-              <h3>点击安装脚本</h3>
-              <p>
-                <a class="btn btn-primary" href="https://github.com/AchengBusiness/discourse-saver/raw/main/userscript/discourse-saver.user.js">
-                  一键安装脚本
-                </a>
-              </p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-content">
-              <h3>配置设置</h3>
-              <p>打开任意 Discourse 论坛，点击油猴图标 → 设置，配置 Vault 名称等</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="section">
         <h2>脚本源码</h2>
-        <p style="margin-bottom: 10px; color: #6b7280; font-size: 14px;">
-          如果按钮无效，请手动复制下方代码到油猴新建脚本
-        </p>
         <textarea class="script-area" id="scriptContent" readonly>
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.5.7
+// @version      4.5.8
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -708,19 +553,59 @@
       // 提取分类 - 增强版
       let category = '';
       const categorySelectors = [
+        // Discourse 标准选择器
         '.topic-category .badge-category__name',
         '.badge-category-bg .badge-category__name',
         '.category-name',
         '.badge-wrapper .badge-category-name',
-        '[itemprop="articleSection"]'
+        '[itemprop="articleSection"]',
+        // 更多变体
+        '.topic-category .badge-category-name',
+        '.topic-header-extra .badge-category__name',
+        '.topic-header-extra .badge-category-name',
+        '#topic-title .badge-category__name',
+        '#topic-title .badge-category-name',
+        '.title-wrapper .badge-category__name',
+        '.title-wrapper .badge-category-name',
+        // 链接形式的分类
+        'a.badge-category__wrapper',
+        'a.badge-wrapper span.badge-category__name',
+        'a.badge-wrapper .badge-category-name',
+        // 面包屑中的分类
+        '.topic-category a[href*="/c/"]',
+        '.breadcrumb .category-name',
+        // Linux.do 特殊选择器
+        '.category-breadcrumb .badge-category__name',
+        '.category-breadcrumb .badge-category-name'
       ];
 
       for (const selector of categorySelectors) {
-        const categoryBadge = document.querySelector(selector);
-        if (categoryBadge) {
-          category = categoryBadge.textContent.trim();
-          break;
+        try {
+          const categoryBadge = document.querySelector(selector);
+          if (categoryBadge) {
+            const text = categoryBadge.textContent.trim();
+            if (text && text.length > 0 && text.length < 100) {
+              category = text;
+              console.log(`[Discourse Saver] 找到分类: "${category}" (选择器: ${selector})`);
+              break;
+            }
+          }
+        } catch (e) {
+          // 忽略选择器错误
         }
+      }
+
+      // 如果还没找到，尝试从 URL 提取
+      if (!category) {
+        const categoryMatch = window.location.pathname.match(/\/c\/([^/]+)/);
+        if (categoryMatch) {
+          category = decodeURIComponent(categoryMatch[1]).replace(/-/g, ' ');
+          console.log(`[Discourse Saver] 从URL提取分类: "${category}"`);
+        }
+      }
+
+      if (!category) {
+        console.log('[Discourse Saver] 未能提取到分类');
       }
 
       // 提取标签 - 增强版
@@ -1624,13 +1509,25 @@ ${tagsYaml}
       }
 
       // 分类 - 查找 select 类型的属性
-      if (metadata.category) {
-        const categoryProp = findMatchingProperty(dbProps, config.notionPropCategory || '分类', 'select');
-        if (categoryProp) {
-          console.log(`[Discourse Saver] 分类属性: "${categoryProp.name}"`);
+      console.log(`[Discourse Saver] metadata.category = "${metadata.category || '(空)'}"`);
+      const categoryProp = findMatchingProperty(dbProps, config.notionPropCategory || '分类', 'select');
+      if (categoryProp) {
+        console.log(`[Discourse Saver] 分类属性: "${categoryProp.name}" (类型: ${categoryProp.type})`);
+        if (metadata.category && metadata.category.trim()) {
           properties[categoryProp.name] = {
-            select: { name: metadata.category }
+            select: { name: metadata.category.trim() }
           };
+          console.log(`[Discourse Saver] 分类值已设置: "${metadata.category.trim()}"`);
+        } else {
+          console.log('[Discourse Saver] 分类为空，跳过设置');
+        }
+      } else {
+        console.log('[Discourse Saver] 未找到分类属性（select类型）');
+        // 尝试查找任何包含"分类"的属性
+        for (const [propName, propInfo] of Object.entries(dbProps)) {
+          if (propName.includes('分类') || propName.toLowerCase().includes('category')) {
+            console.log(`[Discourse Saver] 发现可能的分类属性: "${propName}" (类型: ${propInfo.type})`);
+          }
         }
       }
 
@@ -2630,36 +2527,20 @@ ${tagsYaml}
 
 })();
 </textarea>
-        <p style="margin-top: 10px;">
-          <button class="btn btn-primary" style="padding: 10px 20px; font-size: 14px;" onclick="copyScript()">复制脚本代码</button>
-        </p>
+        <p style="margin-top: 10px;"><button class="btn btn-primary" style="padding: 10px 20px; font-size: 14px;" onclick="navigator.clipboard.writeText(document.getElementById('scriptContent').value);alert('已复制!');">复制脚本代码</button></p>
       </div>
-
       <div class="section">
-        <h2>更新日志 (V4.5.7)</h2>
+        <h2>更新日志 (V4.5.8)</h2>
         <div class="changelog">
           <ul>
-            <li><strong>修复</strong>: Notion 保存前自动获取数据库属性，智能匹配字段名称</li>
-            <li><strong>新增</strong>: 支持模糊匹配属性名（大小写、空格不敏感）</li>
-            <li><strong>新增</strong>: 控制台详细日志，显示匹配到的属性</li>
-            <li><strong>优化</strong>: 自动查找 title 类型属性作为标题字段</li>
+            <li><strong>修复</strong>: 增强分类提取逻辑，支持更多 Discourse 变体</li>
+            <li><strong>新增</strong>: 从 URL 提取分类作为备选方案</li>
+            <li><strong>优化</strong>: 控制台详细日志显示分类提取和匹配结果</li>
           </ul>
         </div>
       </div>
     </div>
-
-    <div class="footer">
-      <p>Made with ❤️ by 阿成 | <a href="https://github.com/AchengBusiness/discourse-saver" target="_blank">GitHub</a></p>
-    </div>
+    <div class="footer"><p>Made with ❤️ by 阿成 | <a href="https://github.com/AchengBusiness/discourse-saver" target="_blank">GitHub</a></p></div>
   </div>
-
-  <script>
-    function copyScript() {
-      const textarea = document.getElementById('scriptContent');
-      textarea.select();
-      document.execCommand('copy');
-      alert('脚本已复制到剪贴板！请在油猴中新建脚本并粘贴。');
-    }
-  </script>
 </body>
 </html>

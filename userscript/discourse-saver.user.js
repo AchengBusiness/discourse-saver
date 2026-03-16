@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.5.7
+// @version      4.5.8
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -510,19 +510,59 @@
       // 提取分类 - 增强版
       let category = '';
       const categorySelectors = [
+        // Discourse 标准选择器
         '.topic-category .badge-category__name',
         '.badge-category-bg .badge-category__name',
         '.category-name',
         '.badge-wrapper .badge-category-name',
-        '[itemprop="articleSection"]'
+        '[itemprop="articleSection"]',
+        // 更多变体
+        '.topic-category .badge-category-name',
+        '.topic-header-extra .badge-category__name',
+        '.topic-header-extra .badge-category-name',
+        '#topic-title .badge-category__name',
+        '#topic-title .badge-category-name',
+        '.title-wrapper .badge-category__name',
+        '.title-wrapper .badge-category-name',
+        // 链接形式的分类
+        'a.badge-category__wrapper',
+        'a.badge-wrapper span.badge-category__name',
+        'a.badge-wrapper .badge-category-name',
+        // 面包屑中的分类
+        '.topic-category a[href*="/c/"]',
+        '.breadcrumb .category-name',
+        // Linux.do 特殊选择器
+        '.category-breadcrumb .badge-category__name',
+        '.category-breadcrumb .badge-category-name'
       ];
 
       for (const selector of categorySelectors) {
-        const categoryBadge = document.querySelector(selector);
-        if (categoryBadge) {
-          category = categoryBadge.textContent.trim();
-          break;
+        try {
+          const categoryBadge = document.querySelector(selector);
+          if (categoryBadge) {
+            const text = categoryBadge.textContent.trim();
+            if (text && text.length > 0 && text.length < 100) {
+              category = text;
+              console.log(`[Discourse Saver] 找到分类: "${category}" (选择器: ${selector})`);
+              break;
+            }
+          }
+        } catch (e) {
+          // 忽略选择器错误
         }
+      }
+
+      // 如果还没找到，尝试从 URL 提取
+      if (!category) {
+        const categoryMatch = window.location.pathname.match(/\/c\/([^/]+)/);
+        if (categoryMatch) {
+          category = decodeURIComponent(categoryMatch[1]).replace(/-/g, ' ');
+          console.log(`[Discourse Saver] 从URL提取分类: "${category}"`);
+        }
+      }
+
+      if (!category) {
+        console.log('[Discourse Saver] 未能提取到分类');
       }
 
       // 提取标签 - 增强版
@@ -1426,13 +1466,25 @@ ${tagsYaml}
       }
 
       // 分类 - 查找 select 类型的属性
-      if (metadata.category) {
-        const categoryProp = findMatchingProperty(dbProps, config.notionPropCategory || '分类', 'select');
-        if (categoryProp) {
-          console.log(`[Discourse Saver] 分类属性: "${categoryProp.name}"`);
+      console.log(`[Discourse Saver] metadata.category = "${metadata.category || '(空)'}"`);
+      const categoryProp = findMatchingProperty(dbProps, config.notionPropCategory || '分类', 'select');
+      if (categoryProp) {
+        console.log(`[Discourse Saver] 分类属性: "${categoryProp.name}" (类型: ${categoryProp.type})`);
+        if (metadata.category && metadata.category.trim()) {
           properties[categoryProp.name] = {
-            select: { name: metadata.category }
+            select: { name: metadata.category.trim() }
           };
+          console.log(`[Discourse Saver] 分类值已设置: "${metadata.category.trim()}"`);
+        } else {
+          console.log('[Discourse Saver] 分类为空，跳过设置');
+        }
+      } else {
+        console.log('[Discourse Saver] 未找到分类属性（select类型）');
+        // 尝试查找任何包含"分类"的属性
+        for (const [propName, propInfo] of Object.entries(dbProps)) {
+          if (propName.includes('分类') || propName.toLowerCase().includes('category')) {
+            console.log(`[Discourse Saver] 发现可能的分类属性: "${propName}" (类型: ${propInfo.type})`);
+          }
         }
       }
 
