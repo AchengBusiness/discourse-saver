@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.6.1
+// @version      4.6.2
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -2578,13 +2578,16 @@ ${tagsYaml}
       }
 
       let fileName = UtilModule.sanitizeFileName(title);
+      let displayTitle = title;  // Notion 等显示用的标题
+
       if (isSingleCommentMode) {
-        fileName += `_${targetPostNumber}楼`;
+        fileName += `-${targetPostNumber}楼`;
+        displayTitle = `${title} #${targetPostNumber}楼`;  // Notion 标题也加上楼层信息
       }
 
-      const metadata = { title, url, author, category, tags, commentCount: comments.length };
+      const metadata = { title: displayTitle, url, author, category, tags, commentCount: comments.length };
 
-      return { markdown, fileName, metadata, comments, config };
+      return { markdown, fileName, metadata, comments, config, isSingleCommentMode, targetPostNumber };
     }
 
     // 独立导出：仅保存到 Obsidian
