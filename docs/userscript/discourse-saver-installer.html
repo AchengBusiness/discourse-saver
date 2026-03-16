@@ -1,3 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discourse Saver 油猴脚本安装器</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 { font-size: 28px; margin-bottom: 10px; }
+    .header p { opacity: 0.9; font-size: 16px; }
+    .version { 
+      display: inline-block; 
+      background: rgba(255,255,255,0.2); 
+      padding: 4px 12px; 
+      border-radius: 20px; 
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .content { padding: 30px; }
+    .section { margin-bottom: 30px; }
+    .section h2 {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .btn {
+      display: inline-block;
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+    }
+    .script-area {
+      width: 100%;
+      height: 300px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      padding: 15px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f9fafb;
+      resize: vertical;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .feature {
+      padding: 15px;
+      background: #f3f4f6;
+      border-radius: 8px;
+    }
+    .feature-icon { font-size: 24px; margin-bottom: 8px; }
+    .feature-title { font-weight: 600; color: #1f2937; margin-bottom: 5px; }
+    .feature-desc { font-size: 14px; color: #6b7280; }
+    .steps { counter-reset: step; }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 15px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: #4f46e5;
+      color: white;
+      border-radius: 50%;
+      font-weight: 600;
+      margin-right: 15px;
+      flex-shrink: 0;
+    }
+    .step-content h3 { font-size: 15px; color: #1f2937; margin-bottom: 5px; }
+    .step-content p { font-size: 14px; color: #6b7280; }
+    .changelog { font-size: 14px; color: #4b5563; }
+    .changelog ul { margin-left: 20px; margin-top: 10px; }
+    .changelog li { margin-bottom: 8px; }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      background: #f9fafb;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .footer a { color: #4f46e5; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Discourse Saver</h1>
+      <p>通用 Discourse 论坛内容保存工具</p>
+      <div class="version">V4.5.6</div>
+    </div>
+    
+    <div class="content">
+      <div class="section">
+        <h2>功能特性</h2>
+        <div class="features">
+          <div class="feature">
+            <div class="feature-icon">📝</div>
+            <div class="feature-title">多目标保存</div>
+            <div class="feature-desc">支持 Obsidian、Notion、HTML 三种保存方式</div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">💬</div>
+            <div class="feature-title">评论支持</div>
+            <div class="feature-desc">可保存评论，支持楼层范围和折叠模式</div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🖼️</div>
+            <div class="feature-title">图片嵌入</div>
+            <div class="feature-desc">Base64嵌入解决手机端图片显示问题</div>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">快速操作</div>
+            <div class="feature-desc">单击链接按钮保存，双击复制链接</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>安装步骤</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-content">
+              <h3>安装油猴扩展</h3>
+              <p>Chrome/Edge 安装 <a href="https://www.tampermonkey.net/" target="_blank">Tampermonkey</a>，Firefox 安装 <a href="https://violentmonkey.github.io/" target="_blank">Violentmonkey</a></p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-content">
+              <h3>点击安装脚本</h3>
+              <p>
+                <a class="btn btn-primary" href="https://github.com/AchengBusiness/discourse-saver/raw/main/userscript/discourse-saver.user.js">
+                  一键安装脚本
+                </a>
+              </p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-content">
+              <h3>配置设置</h3>
+              <p>打开任意 Discourse 论坛，点击油猴图标 → 设置，配置 Vault 名称等</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>脚本源码</h2>
+        <p style="margin-bottom: 10px; color: #6b7280; font-size: 14px;">
+          如果按钮无效，请手动复制下方代码到油猴新建脚本
+        </p>
+        <textarea class="script-area" id="scriptContent" readonly>
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
@@ -2327,3 +2525,38 @@ ${tagsYaml}
   UIModule.init();
 
 })();
+</textarea>
+        <p style="margin-top: 10px;">
+          <button class="btn btn-primary" style="padding: 10px 20px; font-size: 14px;" onclick="copyScript()">复制脚本代码</button>
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>更新日志 (V4.5.6)</h2>
+        <div class="changelog">
+          <ul>
+            <li><strong>修复</strong>: 增强网站检测逻辑，支持更多 Discourse 论坛变体</li>
+            <li><strong>新增</strong>: 调试菜单（油猴菜单 → 调试信息）帮助排查问题</li>
+            <li><strong>优化</strong>: 标题/内容/作者选择器支持多种 DOM 结构</li>
+            <li><strong>优化</strong>: 自动检测 Discourse 论坛特征（meta 标签、CSS 类等）</li>
+            <li><strong>保持</strong>: 剪贴板模式作为大文件首选，备选下载菜单</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Made with ❤️ by 阿成 | <a href="https://github.com/AchengBusiness/discourse-saver" target="_blank">GitHub</a></p>
+    </div>
+  </div>
+
+  <script>
+    function copyScript() {
+      const textarea = document.getElementById('scriptContent');
+      textarea.select();
+      document.execCommand('copy');
+      alert('脚本已复制到剪贴板！请在油猴中新建脚本并粘贴。');
+    }
+  </script>
+</body>
+</html>
