@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.6.2
+// @version      4.6.3
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -1261,15 +1261,59 @@
       if (vimeoMatch) {
         return { embedUrl: 'https://player.vimeo.com/video/' + vimeoMatch[1], isVideo: true, platform: 'vimeo' };
       }
+      // 优酷
+      const youkuMatch = href.match(/v\.youku\.com\/v_show\/id_([a-zA-Z0-9=]+)/);
+      if (youkuMatch) {
+        return { embedUrl: 'https://player.youku.com/embed/' + youkuMatch[1], isVideo: true, platform: 'youku' };
+      }
+      // 腾讯视频
+      const qqMatch = href.match(/v\.qq\.com\/x\/(?:cover\/[^\/]+\/|page\/|play\/)([a-zA-Z0-9]+)/);
+      if (qqMatch) {
+        return { embedUrl: 'https://v.qq.com/txp/iframe/player.html?vid=' + qqMatch[1], isVideo: true, platform: 'qq' };
+      }
       return { embedUrl: '', isVideo: false, platform: '' };
+    }
+
+    // 解析网盘链接
+    function parseCloudUrl(href) {
+      // 百度网盘
+      if (/pan\.baidu\.com|yun\.baidu\.com/i.test(href)) {
+        return { isCloud: true, platform: 'baidu', name: '百度网盘', icon: '📦' };
+      }
+      // 夸克网盘
+      if (/pan\.quark\.cn/i.test(href)) {
+        return { isCloud: true, platform: 'quark', name: '夸克网盘', icon: '📦' };
+      }
+      // 123云盘
+      if (/123pan\.com|123云盘/i.test(href)) {
+        return { isCloud: true, platform: '123pan', name: '123云盘', icon: '📦' };
+      }
+      // 蓝奏云
+      if (/lanzou[a-z]*\.(com|cn)|lanzoui\.com|lanzoux\.com/i.test(href)) {
+        return { isCloud: true, platform: 'lanzou', name: '蓝奏云', icon: '📦' };
+      }
+      // 阿里云盘
+      if (/aliyundrive\.com|alipan\.com/i.test(href)) {
+        return { isCloud: true, platform: 'aliyun', name: '阿里云盘', icon: '📦' };
+      }
+      // 天翼云盘
+      if (/cloud\.189\.cn/i.test(href)) {
+        return { isCloud: true, platform: 'tianyi', name: '天翼云盘', icon: '📦' };
+      }
+      return { isCloud: false, platform: '', name: '', icon: '' };
     }
 
     // 生成视频嵌入
     function generateVideoEmbed(videoInfo, originalUrl) {
       if (videoInfo.embedUrl) {
-        return '\n\n<iframe src="' + videoInfo.embedUrl + '" style="width:100%; aspect-ratio:16/9;" frameborder="0" allowfullscreen></iframe>\n\n';
+        return '\n\n<div style="position:relative;width:100%;padding-bottom:56.25%;"><iframe src="' + videoInfo.embedUrl + '" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div>\n\n';
       }
       return '\n\n' + originalUrl + '\n\n';
+    }
+
+    // 生成网盘链接块
+    function generateCloudBlock(cloudInfo, originalUrl, linkText) {
+      return '\n\n> ' + cloudInfo.icon + ' **' + cloudInfo.name + '**: [' + (linkText || '点击下载') + '](' + originalUrl + ')\n\n';
     }
 
     // 初始化Turndown
@@ -1391,6 +1435,24 @@
           const videoInfo = parseVideoUrl(href);
           if (videoInfo.isVideo) {
             return generateVideoEmbed(videoInfo, href);
+          }
+          return '[' + content + '](' + href + ')';
+        }
+      });
+
+      // 网盘链接特殊处理
+      turndownService.addRule('cloudStorageLink', {
+        filter: (node) => {
+          if (node.nodeName !== 'A') return false;
+          const href = node.href || '';
+          const cloudInfo = parseCloudUrl(href);
+          return cloudInfo.isCloud;
+        },
+        replacement: (content, node) => {
+          const href = node.href || '';
+          const cloudInfo = parseCloudUrl(href);
+          if (cloudInfo.isCloud) {
+            return generateCloudBlock(cloudInfo, href, content);
           }
           return '[' + content + '](' + href + ')';
         }
@@ -2193,9 +2255,13 @@ ${tagsYaml}
 
       // 辅助函数：检测URL类型
       function getUrlType(url) {
-        // 视频链接
-        if (/youtube\.com|youtu\.be|vimeo\.com|bilibili\.com|b23\.tv/i.test(url)) {
+        // 视频链接（YouTube、Bilibili、Vimeo、优酷、腾讯视频）
+        if (/youtube\.com|youtu\.be|vimeo\.com|bilibili\.com|b23\.tv|v\.youku\.com|v\.qq\.com/i.test(url)) {
           return 'video';
+        }
+        // 网盘链接
+        if (/pan\.baidu\.com|yun\.baidu\.com|pan\.quark\.cn|123pan\.com|lanzou[a-z]*\.(com|cn)|lanzoui\.com|lanzoux\.com|aliyundrive\.com|alipan\.com|cloud\.189\.cn/i.test(url)) {
+          return 'cloud';
         }
         // 音频链接
         if (/\.mp3|\.wav|\.ogg|\.m4a|\.aac|soundcloud\.com|spotify\.com|music\./i.test(url)) {
@@ -2210,6 +2276,17 @@ ${tagsYaml}
           return 'pdf';
         }
         return 'link';
+      }
+
+      // 辅助函数：获取网盘名称
+      function getCloudName(url) {
+        if (/pan\.baidu\.com|yun\.baidu\.com/i.test(url)) return '百度网盘';
+        if (/pan\.quark\.cn/i.test(url)) return '夸克网盘';
+        if (/123pan\.com/i.test(url)) return '123云盘';
+        if (/lanzou/i.test(url)) return '蓝奏云';
+        if (/aliyundrive\.com|alipan\.com/i.test(url)) return '阿里云盘';
+        if (/cloud\.189\.cn/i.test(url)) return '天翼云盘';
+        return '网盘';
       }
 
       // 辅助函数：解析富文本（支持加粗、斜体、链接、代码）
@@ -2428,6 +2505,21 @@ ${tagsYaml}
                 video: { type: 'external', external: { url } }
               });
               break;
+            case 'cloud':
+              // 网盘链接：使用 callout 块突出显示
+              blocks.push({
+                type: 'callout',
+                callout: {
+                  icon: { emoji: '📦' },
+                  rich_text: [{
+                    text: { content: getCloudName(url) + ': ', link: null },
+                    annotations: { bold: true }
+                  }, {
+                    text: { content: '点击下载', link: { url } }
+                  }]
+                }
+              });
+              break;
             case 'audio':
               // Notion 不直接支持音频块，使用书签
               blocks.push({
@@ -2468,6 +2560,20 @@ ${tagsYaml}
               blocks.push({
                 type: 'video',
                 video: { type: 'external', external: { url } }
+              });
+            } else if (urlType === 'cloud') {
+              // 网盘链接：使用 callout 块
+              blocks.push({
+                type: 'callout',
+                callout: {
+                  icon: { emoji: '📦' },
+                  rich_text: [{
+                    text: { content: getCloudName(url) + ': ', link: null },
+                    annotations: { bold: true }
+                  }, {
+                    text: { content: text || '点击下载', link: { url } }
+                  }]
+                }
               });
             } else if (urlType === 'image') {
               blocks.push({
