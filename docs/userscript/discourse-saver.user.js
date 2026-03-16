@@ -3,7 +3,7 @@
 // @namespace    https://github.com/discourse-saver
 // @version      4.5.3
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
-// @author       Discourse Saver Team
+// @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
 // @match        https://linux.do/*
 // @match        https://meta.discourse.org/*
