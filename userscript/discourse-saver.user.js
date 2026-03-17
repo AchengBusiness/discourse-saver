@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.6.9
+// @version      4.6.10
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -1733,17 +1733,30 @@ ${tagsYaml}
       const folderPath = config.folderPath || 'Discourse收集箱';
       const encode = (str) => encodeURIComponent(str);
 
+      // 检查必要配置
+      if (!vaultName) {
+        console.warn('[Discourse Saver] 未配置 Vault 名称，Obsidian 可能无法正确打开');
+      }
+
+      // 清理文件名中的特殊字符（Obsidian 不支持的字符）
+      const safeFileName = fileName.replace(/[#\[\]|]/g, '').trim();
+      if (safeFileName !== fileName) {
+        console.log(`[Discourse Saver] 文件名已清理: "${fileName}" -> "${safeFileName}"`);
+      }
+
       // 计算 URL 编码后的内容长度
       const encodedLength = encode(markdown).length;
       // URL 长度限制约 2MB，但浏览器实际限制更低，设置 50KB 阈值使用剪贴板模式
       const URL_LENGTH_THRESHOLD = 50000;
       const useClipboard = encodedLength > URL_LENGTH_THRESHOLD;
 
+      console.log(`[Discourse Saver] Obsidian 保存: vault=${vaultName || '(未设置)'}, folder=${folderPath}, file=${safeFileName}, size=${Math.round(encodedLength/1024)}KB, clipboard=${useClipboard}`);
+
       let obsidianUrl;
       if (config.useAdvancedUri) {
         const parts = [];
         if (vaultName) parts.push(`vault=${encode(vaultName)}`);
-        parts.push(`filepath=${encode(`${folderPath}/${fileName}.md`)}`);
+        parts.push(`filepath=${encode(`${folderPath}/${safeFileName}.md`)}`);
 
         if (useClipboard) {
           // 内容过大，使用剪贴板模式
@@ -1753,7 +1766,7 @@ ${tagsYaml}
           console.log(`[Discourse Saver] 内容过大 (${Math.round(encodedLength/1024)}KB)，使用剪贴板模式`);
 
           // 保存信息用于备选下载
-          lastLargeFileSave = { markdown, fileName, folderPath };
+          lastLargeFileSave = { markdown, safeFileName, folderPath };
 
           // 显示提示
           UtilModule.showNotification('内容已复制到剪贴板，正在打开 Obsidian...', 'info');
@@ -1766,7 +1779,7 @@ ${tagsYaml}
         // 普通 URI 模式
         const parts = [];
         if (vaultName) parts.push(`vault=${encode(vaultName)}`);
-        parts.push(`file=${encode(`${folderPath}/${fileName}`)}`);
+        parts.push(`file=${encode(`${folderPath}/${safeFileName}`)}`);
 
         if (useClipboard) {
           // 普通模式也尝试使用剪贴板
@@ -1775,7 +1788,7 @@ ${tagsYaml}
           parts.push(`overwrite=true`);
 
           // 保存信息用于备选下载
-          lastLargeFileSave = { markdown, fileName, folderPath };
+          lastLargeFileSave = { markdown, safeFileName, folderPath };
 
           UtilModule.showNotification('内容已复制到剪贴板，Obsidian 打开后请手动粘贴', 'info');
         } else {
@@ -3193,7 +3206,7 @@ ${tagsYaml}
       overlay.className = 'ds-settings-overlay';
       overlay.innerHTML = `
         <div class="ds-settings-panel">
-          <h2>📝 Discourse Saver 设置 (V4.6.9)</h2>
+          <h2>📝 Discourse Saver 设置 (V4.6.10)</h2>
 
           <div class="ds-section-title">自定义站点</div>
 
