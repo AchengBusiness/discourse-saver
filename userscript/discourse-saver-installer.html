@@ -31,20 +31,23 @@
     <div class="header">
       <h1>Discourse Saver</h1>
       <p>通用 Discourse 论坛内容保存工具</p>
-      <div class="version">V4.6.7</div>
+      <div class="version">V4.6.24</div>
     </div>
     <div class="content">
       <div class="section">
         <h2>安装脚本</h2>
-        <p><a class="btn btn-primary" href="https://github.com/AchengBusiness/discourse-saver/raw/main/userscript/discourse-saver.user.js">一键安装脚本</a></p>
+        <p><a class="btn btn-primary" href="https://github.com/AchengBusiness/discourse-saver/raw/main/discourse-saver.user.js">一键安装脚本</a></p>
       </div>
       <div class="section">
-        <h2>更新日志 (v4.6.7) <span class="new-badge">NEW</span></h2>
+        <h2>更新日志 (v4.6.24) <span class="new-badge">NEW</span></h2>
         <div class="changelog">
           <ul>
-            <li><strong>多目标保存修复</strong> - 修复同时开启多个保存目标时结果不显示的问题</li>
-            <li><strong>Obsidian 不跳转</strong> - 使用 iframe 方式打开 Obsidian，页面不再跳转</li>
-            <li><strong>统一结果通知</strong> - 所有任务完成后统一显示保存结果</li>
+            <li><strong>Obsidian 保存重构</strong> - 采用 v4.3.8 验证过的剪贴板方式，始终使用 clipboard=true</li>
+            <li><strong>原生剪贴板 API</strong> - 优先使用 navigator.clipboard，兼容性更好</li>
+            <li><strong>测试按钮</strong> - 设置面板新增 "测试 Obsidian 连接" 按钮</li>
+            <li><strong>Notion 代码语言</strong> - 修复 plaintext 等语言映射问题</li>
+            <li><strong>移动端支持</strong> - Android 端 URI 长度优化</li>
+            <li><strong>详细调试日志</strong> - 便于排查保存问题</li>
           </ul>
         </div>
       </div>
