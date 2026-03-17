@@ -60,8 +60,8 @@
 // @connect      *
 // @run-at       document-end
 // @license      MIT
-// @downloadURL  https://github.com/discourse-saver/userscript/raw/main/discourse-saver.user.js
-// @updateURL    https://github.com/discourse-saver/userscript/raw/main/discourse-saver.user.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/AchengBusiness/discourse-saver@main/discourse-saver.user.js
+// @updateURL    https://cdn.jsdelivr.net/gh/AchengBusiness/discourse-saver@main/discourse-saver.user.js
 // ==/UserScript==
 
 (function() {
