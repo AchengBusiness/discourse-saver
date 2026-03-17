@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.6.12
+// @version      4.6.13
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -1684,11 +1684,19 @@ ${tagsYaml}
         let effectiveCommentCount = config.commentCount;
         let effectiveSaveAll = config.saveAllComments;
 
+        console.log('[Discourse Saver] 评论配置:', {
+          saveComments: config.saveComments,
+          saveAllComments: config.saveAllComments,
+          commentCount: config.commentCount,
+          useFloorRange: config.useFloorRange
+        });
+
         if (config.useFloorRange) {
           effectiveCommentCount = config.floorTo || 100;
         }
 
         const useAPI = effectiveSaveAll || effectiveCommentCount > 30;
+        console.log(`[Discourse Saver] 使用API: ${useAPI}, topicId: ${topicId}, saveAll: ${effectiveSaveAll}`);
 
         if (useAPI && topicId) {
           UtilModule.showNotification('正在通过API加载评论...', 'info');
@@ -1699,14 +1707,19 @@ ${tagsYaml}
               effectiveSaveAll,
               (msg) => UtilModule.showNotification(msg, 'info')
             );
+            console.log(`[Discourse Saver] API获取评论成功: ${comments.length} 条`);
           } catch (apiError) {
             console.warn('[Discourse Saver] API获取失败，回退到DOM方式:', apiError);
             comments = ExtractModule.extractComments(effectiveCommentCount);
+            console.log(`[Discourse Saver] DOM获取评论: ${comments.length} 条`);
           }
         } else {
           UtilModule.showNotification('正在提取评论...', 'info');
           comments = ExtractModule.extractComments(effectiveCommentCount);
+          console.log(`[Discourse Saver] DOM提取评论: ${comments.length} 条`);
         }
+      } else {
+        console.log('[Discourse Saver] 评论保存未启用 (saveComments=false)');
       }
 
       // 楼层范围过滤
@@ -2353,79 +2366,131 @@ ${tagsYaml}
         }
       }
 
-      // 辅助函数：解析富文本（支持加粗、斜体、链接、代码）
+      // 辅助函数：解析富文本（支持加粗、斜体、链接、代码）- 增强错误处理
       function parseRichText(text) {
-        const richText = [];
-        let remaining = text;
+        // 确保输入有效
+        if (!text || typeof text !== 'string') {
+          return [{ text: { content: ' ' } }];
+        }
 
-        // 简单处理：如果有复杂格式，按段处理
-        // 检测链接 [text](url)
-        const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+        const safeText = text.substring(0, 2000); // Notion 限制
+        const richText = [];
+
+        try {
+          // 检测链接 [text](url)
+          const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+          let lastIndex = 0;
+          let match;
+
+          while ((match = linkRegex.exec(safeText)) !== null) {
+            // 添加链接前的文本
+            if (match.index > lastIndex) {
+              const before = safeText.substring(lastIndex, match.index);
+              if (before && before.trim()) {
+                const formatted = parseInlineFormatting(before);
+                if (formatted && formatted.length > 0) {
+                  richText.push(...formatted);
+                }
+              }
+            }
+
+            // 处理链接
+            const linkText = match[1] || '链接';
+            const linkUrl = normalizeUrl(match[2]);
+
+            if (linkUrl) {
+              richText.push({
+                text: { content: linkText.substring(0, 2000), link: { url: linkUrl } }
+              });
+            } else {
+              // URL 无效，只显示文本
+              richText.push({
+                text: { content: linkText.substring(0, 2000) }
+              });
+            }
+            lastIndex = match.index + match[0].length;
+          }
+
+          // 添加剩余文本
+          if (lastIndex < safeText.length) {
+            const remaining = safeText.substring(lastIndex);
+            if (remaining && remaining.trim()) {
+              const formatted = parseInlineFormatting(remaining);
+              if (formatted && formatted.length > 0) {
+                richText.push(...formatted);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Discourse Saver] parseRichText 错误:', e.message);
+          return [{ text: { content: safeText || ' ' } }];
+        }
+
+        // 确保不返回空数组
+        if (richText.length === 0) {
+          return [{ text: { content: safeText || ' ' } }];
+        }
+
+        return richText;
+      }
+
+      // 辅助函数：解析内联格式（加粗、斜体、代码）- 修复顺序问题
+      function parseInlineFormatting(text) {
+        if (!text || text.trim() === '') {
+          return [{ text: { content: ' ' } }]; // Notion 不允许空 rich_text
+        }
+
+        const parts = [];
+        // 使用正则分割并保持顺序
+        const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
         let lastIndex = 0;
         let match;
 
-        while ((match = linkRegex.exec(text)) !== null) {
-          // 添加链接前的文本
+        while ((match = regex.exec(text)) !== null) {
+          // 添加匹配前的普通文本
           if (match.index > lastIndex) {
             const before = text.substring(lastIndex, match.index);
             if (before) {
-              richText.push(...parseInlineFormatting(before));
+              parts.push({ text: { content: before.substring(0, 2000) } });
             }
           }
-          // 处理链接 URL
-          const linkUrl = normalizeUrl(match[2]);
-          if (linkUrl) {
-            richText.push({
-              text: { content: match[1], link: { url: linkUrl } }
-            });
-          } else {
-            // URL 无效，只显示文本不添加链接
-            richText.push({
-              text: { content: match[1] }
-            });
+
+          const matched = match[1];
+          // 加粗 **text**
+          if (matched.startsWith('**') && matched.endsWith('**')) {
+            const content = matched.slice(2, -2);
+            if (content) {
+              parts.push({ text: { content: content.substring(0, 2000) }, annotations: { bold: true } });
+            }
           }
+          // 行内代码 `text`
+          else if (matched.startsWith('`') && matched.endsWith('`')) {
+            const content = matched.slice(1, -1);
+            if (content) {
+              parts.push({ text: { content: content.substring(0, 2000) }, annotations: { code: true } });
+            }
+          }
+          // 斜体 *text*
+          else if (matched.startsWith('*') && matched.endsWith('*')) {
+            const content = matched.slice(1, -1);
+            if (content) {
+              parts.push({ text: { content: content.substring(0, 2000) }, annotations: { italic: true } });
+            }
+          }
+
           lastIndex = match.index + match[0].length;
         }
 
         // 添加剩余文本
         if (lastIndex < text.length) {
-          richText.push(...parseInlineFormatting(text.substring(lastIndex)));
+          const remaining = text.substring(lastIndex);
+          if (remaining) {
+            parts.push({ text: { content: remaining.substring(0, 2000) } });
+          }
         }
 
-        return richText.length > 0 ? richText : [{ text: { content: text.substring(0, 2000) } }];
-      }
-
-      // 辅助函数：解析内联格式（加粗、斜体、代码）
-      function parseInlineFormatting(text) {
-        const parts = [];
-        // 简化处理：检测 **加粗** *斜体* `代码`
-        let remaining = text;
-
-        // 加粗
-        remaining = remaining.replace(/\*\*([^*]+)\*\*/g, (_, content) => {
-          parts.push({ text: { content }, annotations: { bold: true } });
-          return '\x00';
-        });
-
-        // 斜体
-        remaining = remaining.replace(/\*([^*]+)\*/g, (_, content) => {
-          parts.push({ text: { content }, annotations: { italic: true } });
-          return '\x00';
-        });
-
-        // 行内代码
-        remaining = remaining.replace(/`([^`]+)`/g, (_, content) => {
-          parts.push({ text: { content }, annotations: { code: true } });
-          return '\x00';
-        });
-
-        // 处理剩余的普通文本
-        const normalParts = remaining.split('\x00').filter(p => p);
-        normalParts.forEach(p => {
-          parts.push({ text: { content: p } });
-        });
-
-        return parts.length > 0 ? parts : [{ text: { content: text.substring(0, 2000) } }];
+        // 确保不返回空数组
+        return parts.length > 0 ? parts : [{ text: { content: text.substring(0, 2000) || ' ' } }];
       }
 
       while (i < lines.length) {
@@ -2693,7 +2758,63 @@ ${tagsYaml}
         i++;
       }
 
-      return blocks;
+      // 过滤并验证所有块，确保每个块都有效
+      const validBlocks = blocks.filter(block => {
+        try {
+          if (!block || !block.type) return false;
+
+          // 检查需要 rich_text 的块类型
+          const richTextTypes = ['paragraph', 'heading_1', 'heading_2', 'heading_3',
+                                 'bulleted_list_item', 'numbered_list_item', 'quote',
+                                 'to_do', 'callout', 'code'];
+
+          if (richTextTypes.includes(block.type)) {
+            const content = block[block.type];
+            if (!content) return false;
+
+            // 检查 rich_text 是否有效
+            if (content.rich_text) {
+              if (!Array.isArray(content.rich_text) || content.rich_text.length === 0) {
+                // 修复空 rich_text
+                content.rich_text = [{ text: { content: ' ' } }];
+              }
+              // 验证每个 rich_text 项
+              content.rich_text = content.rich_text.map(item => {
+                if (!item || !item.text) {
+                  return { text: { content: ' ' } };
+                }
+                if (!item.text.content && item.text.content !== '') {
+                  item.text.content = ' ';
+                }
+                return item;
+              });
+            }
+          }
+
+          // 检查图片/视频/PDF 块
+          if (['image', 'video', 'pdf'].includes(block.type)) {
+            const content = block[block.type];
+            if (!content || !content.external || !content.external.url) {
+              return false;
+            }
+          }
+
+          // 检查书签块
+          if (block.type === 'bookmark') {
+            if (!block.bookmark || !block.bookmark.url) {
+              return false;
+            }
+          }
+
+          return true;
+        } catch (e) {
+          console.warn('[Discourse Saver] 块验证失败:', e.message);
+          return false;
+        }
+      });
+
+      console.log(`[Discourse Saver] Notion 块: 总计 ${blocks.length}, 有效 ${validBlocks.length}`);
+      return validBlocks;
     }
 
     // 测试 Notion 连接（支持两种调用方式）
@@ -3280,7 +3401,7 @@ ${tagsYaml}
       overlay.className = 'ds-settings-overlay';
       overlay.innerHTML = `
         <div class="ds-settings-panel">
-          <h2>📝 Discourse Saver 设置 (V4.6.12)</h2>
+          <h2>📝 Discourse Saver 设置 (V4.6.13)</h2>
 
           <div class="ds-section-title">自定义站点</div>
 
