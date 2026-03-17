@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.6.10
+// @version      4.6.11
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -1735,7 +1735,13 @@ ${tagsYaml}
 
       // 检查必要配置
       if (!vaultName) {
+        UtilModule.showNotification('提示：未配置 Vault 名称，请在设置中填写', 'warning');
         console.warn('[Discourse Saver] 未配置 Vault 名称，Obsidian 可能无法正确打开');
+      }
+
+      // 检查 Advanced URI 配置
+      if (config.useAdvancedUri) {
+        console.log('[Discourse Saver] 使用 Advanced URI 模式，请确保已安装 Advanced URI 插件');
       }
 
       // 清理文件名中的特殊字符（Obsidian 不支持的字符）
@@ -2179,8 +2185,10 @@ ${tagsYaml}
         await archiveNotionPage(token, existingPage.id);
       }
 
-      // 创建新页面
-      return new Promise((resolve, reject) => {
+      // 创建新页面（先添加前100个块）
+      console.log(`[Discourse Saver] 总块数: ${children.length}`);
+
+      const pageData = await new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
           method: 'POST',
           url: 'https://api.notion.com/v1/pages',
@@ -2192,12 +2200,12 @@ ${tagsYaml}
           data: JSON.stringify({
             parent: { database_id: databaseId },
             properties: properties,
-            children: children.slice(0, 100) // Notion 限制首次最多100个块
+            children: children.slice(0, 100)
           }),
           onload: function(response) {
             if (response.status >= 200 && response.status < 300) {
               const data = JSON.parse(response.responseText);
-              console.log('[Discourse Saver] Notion 保存成功:', data.id);
+              console.log('[Discourse Saver] Notion 页面创建成功:', data.id);
               resolve(data);
             } else {
               const error = JSON.parse(response.responseText);
@@ -2211,6 +2219,52 @@ ${tagsYaml}
           }
         });
       });
+
+      // 如果有超过100个块，分批追加剩余的块
+      if (children.length > 100) {
+        const pageId = pageData.id;
+        const remainingChildren = children.slice(100);
+        console.log(`[Discourse Saver] 需要追加 ${remainingChildren.length} 个块`);
+
+        // 每批最多100个块
+        for (let i = 0; i < remainingChildren.length; i += 100) {
+          const batch = remainingChildren.slice(i, i + 100);
+          console.log(`[Discourse Saver] 追加第 ${Math.floor(i/100) + 1} 批，${batch.length} 个块`);
+
+          await new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+              method: 'PATCH',
+              url: `https://api.notion.com/v1/blocks/${pageId}/children`,
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Notion-Version': NOTION_API_VERSION,
+                'Content-Type': 'application/json'
+              },
+              data: JSON.stringify({ children: batch }),
+              onload: function(response) {
+                if (response.status >= 200 && response.status < 300) {
+                  resolve();
+                } else {
+                  console.warn('[Discourse Saver] 追加块失败:', response.responseText);
+                  resolve(); // 继续处理，不中断
+                }
+              },
+              onerror: function() {
+                console.warn('[Discourse Saver] 追加块网络错误');
+                resolve(); // 继续处理
+              }
+            });
+          });
+
+          // 避免 API 限流，稍微延迟
+          if (i + 100 < remainingChildren.length) {
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+        console.log('[Discourse Saver] 所有块追加完成');
+      }
+
+      return pageData;
     }
 
     // Markdown 转 Notion Blocks（v4.6.0 增强版 - 支持更多内容类型）
@@ -3206,7 +3260,7 @@ ${tagsYaml}
       overlay.className = 'ds-settings-overlay';
       overlay.innerHTML = `
         <div class="ds-settings-panel">
-          <h2>📝 Discourse Saver 设置 (V4.6.10)</h2>
+          <h2>📝 Discourse Saver 设置 (V4.6.11)</h2>
 
           <div class="ds-section-title">自定义站点</div>
 
