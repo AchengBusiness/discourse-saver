@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.6.21
+// @version      4.6.22
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -2753,7 +2753,35 @@ ${tagsYaml}
         }
         // 代码块
         else if (line.startsWith('```')) {
-          const lang = line.substring(3).trim() || 'plain text';
+          // Notion 支持的语言映射
+          const notionLanguageMap = {
+            'plaintext': 'plain text',
+            'text': 'plain text',
+            'txt': 'plain text',
+            'sh': 'bash',
+            'shell': 'bash',
+            'zsh': 'bash',
+            'ps1': 'powershell',
+            'ps': 'powershell',
+            'yml': 'yaml',
+            'js': 'javascript',
+            'ts': 'typescript',
+            'py': 'python',
+            'rb': 'ruby',
+            'cs': 'c#',
+            'cpp': 'c++',
+            'objc': 'objective-c',
+            'kt': 'kotlin',
+            'rs': 'rust',
+            'md': 'markdown',
+            'htm': 'html',
+            'dockerfile': 'docker',
+            'make': 'makefile',
+            'asm': 'assembly',
+            '': 'plain text'
+          };
+          const rawLang = line.substring(3).trim().toLowerCase();
+          const lang = notionLanguageMap[rawLang] || rawLang || 'plain text';
           let code = '';
           i++;
           while (i < lines.length && !lines[i].startsWith('```')) {
@@ -3866,7 +3894,7 @@ ${tagsYaml}
       overlay.className = 'ds-settings-overlay';
       overlay.innerHTML = `
         <div class="ds-settings-panel">
-          <h2>📝 Discourse Saver 设置 (V4.6.21)</h2>
+          <h2>📝 Discourse Saver 设置 (V4.6.22)</h2>
 
           <div class="ds-section-title">自定义站点</div>
 
