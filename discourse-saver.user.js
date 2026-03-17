@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discourse Saver (油猴版)
 // @namespace    https://github.com/discourse-saver
-// @version      4.6.13
+// @version      4.6.14
 // @description  通用Discourse论坛内容保存工具 - 支持Obsidian/Notion/HTML，评论、用户名超链接、折叠模式
 // @author       阿成
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=obsidian.md
@@ -1114,9 +1114,12 @@
     async function extractCommentsViaAPI(topicId, maxCount, saveAll = false, progressCallback = null) {
       const comments = [];
       const baseUrl = window.location.origin;
+      let fetchErrors = 0;
 
       try {
         if (progressCallback) progressCallback('正在获取帖子信息...');
+        console.log(`[Discourse Saver] API提取评论: topicId=${topicId}, maxCount=${maxCount}, saveAll=${saveAll}`);
+
         const topicUrl = `${baseUrl}/t/${topicId}.json`;
         const topicResponse = await fetch(topicUrl, { credentials: 'include' });
 
@@ -1127,14 +1130,17 @@
         const topicData = await topicResponse.json();
         const stream = topicData.post_stream?.stream || [];
         const totalPosts = stream.length;
+        console.log(`[Discourse Saver] 帖子流长度: ${totalPosts}`);
 
         if (totalPosts === 0) {
+          console.log('[Discourse Saver] 帖子流为空，无评论');
           return comments;
         }
 
-        const commentIds = stream.slice(1);
+        const commentIds = stream.slice(1); // 排除主帖
         const targetCount = saveAll ? commentIds.length : Math.min(maxCount, commentIds.length);
         const idsToFetch = commentIds.slice(0, targetCount);
+        console.log(`[Discourse Saver] 需要获取 ${idsToFetch.length} 条评论 (目标: ${targetCount})`);
 
         // 分批获取
         const batchSize = 20;
@@ -1148,26 +1154,40 @@
             progressCallback(`正在加载评论 ${progress}/${targetCount}...`);
           }
 
-          const postsResponse = await fetch(postsUrl, { credentials: 'include' });
-          if (!postsResponse.ok) continue;
+          try {
+            const postsResponse = await fetch(postsUrl, { credentials: 'include' });
+            if (!postsResponse.ok) {
+              console.warn(`[Discourse Saver] 批次 ${Math.floor(i/batchSize)+1} 请求失败: ${postsResponse.status}`);
+              fetchErrors++;
+              continue;
+            }
 
-          const postsData = await postsResponse.json();
-          const posts = postsData.post_stream?.posts || [];
+            const postsData = await postsResponse.json();
+            const posts = postsData.post_stream?.posts || [];
+            console.log(`[Discourse Saver] 批次 ${Math.floor(i/batchSize)+1}: 获取 ${posts.length} 个帖子`);
 
-          for (const post of posts) {
-            if (post.post_number === 1) continue;
+            for (const post of posts) {
+              if (post.post_number === 1) continue;
 
-            const postUsername = post.username || post.display_username || '匿名用户';
-            const userUrl = postUsername !== '匿名用户' ? `${baseUrl}/u/${postUsername}` : '';
+              try {
+                const postUsername = post.username || post.display_username || '匿名用户';
+                const userUrl = postUsername !== '匿名用户' ? `${baseUrl}/u/${postUsername}` : '';
 
-            comments.push({
-              username: postUsername,
-              userUrl,
-              contentHTML: post.cooked || '',
-              position: String(post.post_number),
-              time: post.created_at || '',
-              likes: String(post.like_count || 0)
-            });
+                comments.push({
+                  username: postUsername,
+                  userUrl,
+                  contentHTML: post.cooked || '',
+                  position: String(post.post_number),
+                  time: post.created_at || '',
+                  likes: String(post.like_count || 0)
+                });
+              } catch (postError) {
+                console.warn(`[Discourse Saver] 解析帖子 ${post.post_number} 失败:`, postError.message);
+              }
+            }
+          } catch (batchError) {
+            console.warn(`[Discourse Saver] 批次 ${Math.floor(i/batchSize)+1} 处理失败:`, batchError.message);
+            fetchErrors++;
           }
 
           if (i + batchSize < idsToFetch.length) {
@@ -1176,10 +1196,18 @@
         }
 
         comments.sort((a, b) => parseInt(a.position) - parseInt(b.position));
+        console.log(`[Discourse Saver] API评论提取完成: 成功 ${comments.length} 条, 失败批次 ${fetchErrors}`);
+
+        // 即使有部分失败，也返回已获取的评论
         return comments;
 
       } catch (error) {
         console.error('[Discourse Saver] API获取评论失败:', error);
+        // 如果已经获取了一些评论，返回它们而不是抛出错误
+        if (comments.length > 0) {
+          console.log(`[Discourse Saver] 部分成功，返回 ${comments.length} 条评论`);
+          return comments;
+        }
         throw error;
       }
     }
@@ -2565,6 +2593,53 @@ ${tagsYaml}
             });
           }
         }
+        // HTML <details> 块（折叠评论）- 转换为 Notion toggle 块
+        else if (line.startsWith('<details>') || line.match(/^<details\s/)) {
+          // 提取 summary 标题
+          let summaryTitle = '展开';
+          let detailsContent = '';
+          i++;
+
+          // 查找 summary 行
+          while (i < lines.length) {
+            const currentLine = lines[i];
+            if (currentLine.includes('<summary>')) {
+              // 提取 summary 内容
+              const summaryMatch = currentLine.match(/<summary>(.+?)<\/summary>/);
+              if (summaryMatch) {
+                // 移除 HTML 标签
+                summaryTitle = summaryMatch[1].replace(/<[^>]+>/g, '').trim();
+              }
+              i++;
+              continue;
+            }
+            if (currentLine.includes('</details>')) {
+              break;
+            }
+            if (currentLine.trim()) {
+              detailsContent += currentLine + '\n';
+            }
+            i++;
+          }
+
+          // 创建 toggle 块
+          blocks.push({
+            type: 'toggle',
+            toggle: {
+              rich_text: [{ text: { content: summaryTitle.substring(0, 2000) || '展开' } }],
+              children: [{
+                type: 'paragraph',
+                paragraph: {
+                  rich_text: parseRichText(detailsContent.trim().substring(0, 2000) || ' ')
+                }
+              }]
+            }
+          });
+        }
+        // 跳过 </details> 结束标签
+        else if (line.includes('</details>')) {
+          // 已在上面处理，跳过
+        }
         // 引用块
         else if (line.startsWith('> ')) {
           let quoteContent = line.substring(2);
@@ -3401,7 +3476,7 @@ ${tagsYaml}
       overlay.className = 'ds-settings-overlay';
       overlay.innerHTML = `
         <div class="ds-settings-panel">
-          <h2>📝 Discourse Saver 设置 (V4.6.13)</h2>
+          <h2>📝 Discourse Saver 设置 (V4.6.14)</h2>
 
           <div class="ds-section-title">自定义站点</div>
 
